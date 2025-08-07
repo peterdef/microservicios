@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AuthState, User, LoginFormData, RegisterFormData } from '../types/auth';
 import { authService, tokenUtils } from '../services/authService';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginFormData) => Promise<void>;
@@ -35,6 +36,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: false,
     isLoading: true,
   });
+  const router = useRouter();
 
   const checkAuth = async () => {
     try {
@@ -198,6 +200,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isAuthenticated: false,
         isLoading: false,
       });
+      // Redirect to login page
+      router.push('/login');
     }
   };
 

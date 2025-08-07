@@ -3,12 +3,9 @@ server:
 
 spring:
   application:
-    name: servicio-publicaciones
+    name: ms-catalogo
   datasource:
-    #url: jdbc:postgresql://localhost:5432/publicaciones_db
-    #username: postgres
-    #password: qwerty123
-    url: jdbc:postgresql://localhost:26257/publicaciones_db?user=root&password=
+    url: jdbc:postgresql://localhost:26257/catalogo_db?user=root&password=
     username: root
     password:
   jpa:
@@ -19,13 +16,11 @@ spring:
         show_sql: true
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
-
   rabbitmq:
     host: localhost
     port: 5672
     username: admin
     password: admin
-
 
 eureka:
   client:
@@ -41,23 +36,12 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway
-
-logging:
-  level:
-    org.springframework.cloud.gateway: TRACE
-    org.springframework.web: TRACE
-
-# OpenTelemetry configuration
-opentelemetry:
-  jaeger:
-    endpoint: http://localhost:14250
-
-management:
-  endpoints:
-    web:
-      exposure:
         include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: always
+
+logging:
+  level:
+    ec.edu.espe.catalogos: DEBUG
+    org.springframework.amqp: DEBUG

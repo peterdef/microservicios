@@ -114,4 +114,18 @@ public class NotificacionProducer {
             log.error("Error enviando evento PublicationPublished: {}", e.getMessage(), e);
         }
     }
+
+    public void enviarPublicacionAlCatalogo(publicaciones.dto.CatalogoPublicacionDto dto) {
+        try {
+            String json = objectMapper.writeValueAsString(dto);
+            rabbitTemplate.convertAndSend(
+                RabbitMQConfig.PUBLICATION_EVENTS_EXCHANGE,
+                RabbitMQConfig.PUBLICATION_PUBLISHED_KEY,
+                json
+            );
+            log.info("Publicación enviada al catálogo: {}", dto.getTitulo());
+        } catch (Exception e) {
+            log.error("Error enviando publicación al catálogo: {}", e.getMessage(), e);
+        }
+    }
 }

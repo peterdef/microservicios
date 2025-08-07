@@ -1,165 +1,119 @@
 package publicaciones.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import publicaciones.event.PublicationApprovedEvent;
-import publicaciones.event.PublicationPublishedEvent;
-import publicaciones.event.PublicationSubmittedEvent;
-import publicaciones.event.ReviewRequestedEvent;
 import publicaciones.model.EstadoPublicacion;
+import publicaciones.model.HistorialEstado;
 import publicaciones.model.Publicacion;
-import publicaciones.model.Revision;
-import publicaciones.producer.NotificacionProducer;
+import publicaciones.repository.HistorialEstadoRepository;
+import publicaciones.repository.PublicacionRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EstadoPublicacionService {
 
-    private final NotificacionProducer notificacionProducer;
-    private final OutboxService outboxService;
+    private final PublicacionRepository publicacionRepository;
+    private final HistorialEstadoRepository historialEstadoRepository;
+    private final AuthClient authClient;
 
-    public boolean puedeTransicionar(EstadoPublicacion estadoActual, EstadoPublicacion nuevoEstado, String rolUsuario) {
+    @Transactional
+    public void cambiarEstado(UUID publicacionId, EstadoPublicacion nuevoEstado, 
+                            UUID usuarioId, String comentarios, String motivoCambio,
+                            String ipOrigen, String userAgent) {
+        
+        Publicacion publicacion = publicacionRepository.findById(publicacionId)
+                .orElseThrow(() -> new RuntimeException("Publicación no encontrada"));
+        
+        EstadoPublicacion estadoAnterior = publicacion.getEstado();
+        
+        // Validar transición de estado
+        if (!esTransicionValida(estadoAnterior, nuevoEstado, usuarioId)) {
+            throw new RuntimeException("Transición de estado no válida");
+        }
+        
+        // Actualizar estado
+        publicacion.setEstado(nuevoEstado);
+        publicacion.setFechaActualizacion(LocalDateTime.now());
+        publicacionRepository.save(publicacion);
+        
+        // Registrar en historial
+        HistorialEstado historial = new HistorialEstado();
+        historial.setPublicacionId(publicacionId);
+        historial.setEstadoAnterior(estadoAnterior);
+        historial.setEstadoNuevo(nuevoEstado);
+        historial.setUsuarioId(usuarioId);
+        historial.setComentarios(comentarios);
+        historial.setMotivoCambio(motivoCambio);
+        historial.setIpOrigen(ipOrigen);
+        historial.setUserAgent(userAgent);
+        
+        historialEstadoRepository.save(historial);
+        
+        log.info("Estado de publicación {} cambiado de {} a {} por usuario {}", 
+                publicacionId, estadoAnterior, nuevoEstado, usuarioId);
+    }
+
+    private boolean esTransicionValida(EstadoPublicacion estadoActual, EstadoPublicacion nuevoEstado, UUID usuarioId) {
+        // Obtener roles del usuario
+        String[] roles = authClient.getUserRoles(usuarioId.toString(), "Bearer token");
+        
         switch (estadoActual) {
             case BORRADOR:
-                return nuevoEstado == EstadoPublicacion.EN_REVISION && "ROLE_AUTOR".equals(rolUsuario);
-            
+                return nuevoEstado == EstadoPublicacion.EN_REVISION && 
+                       tieneRol(roles, "ROLE_AUTOR");
+                
             case EN_REVISION:
-                return (nuevoEstado == EstadoPublicacion.CAMBIOS_SOLICITADOS && "ROLE_REVISOR".equals(rolUsuario)) ||
-                       (nuevoEstado == EstadoPublicacion.APROBADO && "ROLE_EDITOR".equals(rolUsuario)) ||
-                       (nuevoEstado == EstadoPublicacion.RETIRADO && "ROLE_ADMIN".equals(rolUsuario));
-            
+                return (nuevoEstado == EstadoPublicacion.CAMBIOS_SOLICITADOS && 
+                        tieneRol(roles, "ROLE_REVISOR")) ||
+                       (nuevoEstado == EstadoPublicacion.APROBADO && 
+                        tieneRol(roles, "ROLE_EDITOR"));
+                
             case CAMBIOS_SOLICITADOS:
-                return nuevoEstado == EstadoPublicacion.EN_REVISION && "ROLE_AUTOR".equals(rolUsuario);
-            
+                return nuevoEstado == EstadoPublicacion.EN_REVISION && 
+                       tieneRol(roles, "ROLE_AUTOR");
+                
             case APROBADO:
-                return nuevoEstado == EstadoPublicacion.PUBLICADO && "ROLE_EDITOR".equals(rolUsuario);
-            
+                return nuevoEstado == EstadoPublicacion.PUBLICADO && 
+                       tieneRol(roles, "ROLE_EDITOR");
+                
             case PUBLICADO:
-                return nuevoEstado == EstadoPublicacion.RETIRADO && "ROLE_ADMIN".equals(rolUsuario);
-            
-            case RETIRADO:
-                return false; // No se puede cambiar desde retirado
-            
+                return nuevoEstado == EstadoPublicacion.RETIRADO && 
+                       tieneRol(roles, "ROLE_ADMIN");
+                
             default:
                 return false;
         }
     }
 
-    @Transactional
-    public void cambiarEstado(Publicacion publicacion, EstadoPublicacion nuevoEstado, String rolUsuario, String comentario) {
-        if (!puedeTransicionar(publicacion.getEstado(), nuevoEstado, rolUsuario)) {
-            throw new IllegalStateException("No se puede cambiar de " + publicacion.getEstado() + " a " + nuevoEstado + " con rol " + rolUsuario);
+    private boolean tieneRol(String[] roles, String rolRequerido) {
+        for (String rol : roles) {
+            if (rol.equals(rolRequerido)) {
+                return true;
+            }
         }
-
-        EstadoPublicacion estadoAnterior = publicacion.getEstado();
-        publicacion.setEstado(nuevoEstado);
-        
-        // Incrementar versión si es necesario
-        if (nuevoEstado == EstadoPublicacion.EN_REVISION) {
-            publicacion.setVersionActual(publicacion.getVersionActual() + 1);
-        }
-
-        // Enviar notificación según el cambio de estado
-        enviarNotificacionCambioEstado(publicacion, estadoAnterior, nuevoEstado, comentario);
-        
-        // Guardar evento en outbox para garantizar entrega
-        guardarEventoEnOutbox(publicacion, nuevoEstado, rolUsuario, comentario);
+        return false;
     }
 
-    private void enviarNotificacionCambioEstado(Publicacion publicacion, EstadoPublicacion estadoAnterior, EstadoPublicacion nuevoEstado, String comentario) {
-        String mensaje = String.format("Publicación '%s' cambió de estado: %s → %s", 
-                publicacion.getTitulo(), 
-                estadoAnterior.getDescripcion(), 
-                nuevoEstado.getDescripcion());
-        
-        String tipo = "CAMBIO_ESTADO";
-        
-        if (comentario != null && !comentario.trim().isEmpty()) {
-            mensaje += " - Comentario: " + comentario;
-        }
-
-        notificacionProducer.enviarNotificacion(mensaje, tipo);
+    public List<HistorialEstado> obtenerHistorialPublicacion(UUID publicacionId) {
+        return historialEstadoRepository.findByPublicacionIdOrderByFechaCambioDesc(publicacionId);
     }
 
-    public boolean puedeRevisar(UUID publicacionId, UUID revisorId, List<Revision> revisiones) {
-        // Verificar que el revisor no haya revisado ya esta publicación
-        return revisiones.stream()
-                .noneMatch(revision -> revision.getRevisorId().equals(revisorId) && 
-                        revision.getPublicacionId().equals(publicacionId));
+    public List<HistorialEstado> obtenerHistorialUsuario(UUID usuarioId) {
+        return historialEstadoRepository.findByUsuarioIdOrderByFechaCambioDesc(usuarioId);
     }
 
-    public void asignarRevisor(Publicacion publicacion, UUID revisorId) {
-        if (publicacion.getEstado() != EstadoPublicacion.EN_REVISION) {
-            throw new IllegalStateException("Solo se pueden asignar revisores a publicaciones en revisión");
-        }
-
-        String mensaje = String.format("Revisor asignado a la publicación '%s'", publicacion.getTitulo());
-        notificacionProducer.enviarNotificacion(mensaje, "ASIGNACION_REVISOR");
-        
-        // Guardar evento de asignación de revisor
-        ReviewRequestedEvent event = new ReviewRequestedEvent();
-        event.setPublicationId(publicacion.getId());
-        event.setRevisorId(revisorId);
-        event.setUserId("system");
-        event.setUserRole("SYSTEM");
-        
-        outboxService.guardarEvento(
-            publicacion.getId(),
-            "Publication",
-            "ReviewRequested",
-            event
-        );
+    public List<HistorialEstado> obtenerHistorialPorEstado(EstadoPublicacion estado) {
+        return historialEstadoRepository.findByEstadoNuevoOrderByFechaCambioDesc(estado);
     }
 
-    private void guardarEventoEnOutbox(Publicacion publicacion, EstadoPublicacion nuevoEstado, String rolUsuario, String comentario) {
-        switch (nuevoEstado) {
-            case EN_REVISION:
-                PublicationSubmittedEvent submittedEvent = new PublicationSubmittedEvent();
-                submittedEvent.setPublicationId(publicacion.getId());
-                submittedEvent.setUserId("system");
-                submittedEvent.setUserRole(rolUsuario);
-                
-                outboxService.guardarEvento(
-                    publicacion.getId(),
-                    "Publication",
-                    "PublicationSubmitted",
-                    submittedEvent
-                );
-                break;
-                
-            case APROBADO:
-                PublicationApprovedEvent approvedEvent = new PublicationApprovedEvent();
-                approvedEvent.setPublicationId(publicacion.getId());
-                approvedEvent.setApprovedBy(rolUsuario);
-                approvedEvent.setApprovalComments(comentario);
-                approvedEvent.setUserId("system");
-                approvedEvent.setUserRole(rolUsuario);
-                
-                outboxService.guardarEvento(
-                    publicacion.getId(),
-                    "Publication",
-                    "PublicationApproved",
-                    approvedEvent
-                );
-                break;
-                
-            case PUBLICADO:
-                PublicationPublishedEvent publishedEvent = new PublicationPublishedEvent();
-                publishedEvent.setPublicationId(publicacion.getId());
-                publishedEvent.setUserId("system");
-                publishedEvent.setUserRole(rolUsuario);
-                
-                outboxService.guardarEvento(
-                    publicacion.getId(),
-                    "Publication",
-                    "PublicationPublished",
-                    publishedEvent
-                );
-                break;
-        }
+    public List<HistorialEstado> obtenerHistorialPorMotivo(String motivoCambio) {
+        return historialEstadoRepository.findByMotivoCambioOrderByFechaCambioDesc(motivoCambio);
     }
 }

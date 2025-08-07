@@ -17,18 +17,76 @@ spring:
               uri: lb://api-publicaciones
               predicates:
                 - Path=/autores,/autores/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: publicaciones-circuit-breaker
+                    fallbackUri: forward:/fallback/publicaciones
             - id: publicaciones-libros
               uri: lb://api-publicaciones
               predicates:
                 - Path=/api/v1/libros/**
               filters:
                 - StripPrefix=2
+                - name: CircuitBreaker
+                  args:
+                    name: publicaciones-circuit-breaker
+                    fallbackUri: forward:/fallback/publicaciones
             - id: servicio-notificaciones
               uri: lb://servicio-notificaciones
               predicates:
                 - Path=/api/v1/notificaciones/**
               filters:
                 - StripPrefix=2
+                - name: CircuitBreaker
+                  args:
+                    name: notificaciones-circuit-breaker
+                    fallbackUri: forward:/fallback/notificaciones
+            - id: catalogo-publico
+              uri: lb://ms-catalogo
+              predicates:
+                - Path=/api/v1/catalogo/**
+              filters:
+                - StripPrefix=2
+                - name: CircuitBreaker
+                  args:
+                    name: catalogo-circuit-breaker
+                    fallbackUri: forward:/fallback/catalogo
+
+# Resilience4j configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      publicaciones-circuit-breaker:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+      notificaciones-circuit-breaker:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+      catalogo-circuit-breaker:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+  ratelimiter:
+    instances:
+      default:
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0
 
 
 eureka:

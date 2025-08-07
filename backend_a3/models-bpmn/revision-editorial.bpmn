@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.37.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.7.0">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_Autor" name="AUTOR" processRef="Process_Autor" />
+    <bpmn:participant id="Participant_Editor" name="EDITOR" processRef="Process_Editor" />
+    <bpmn:participant id="Participant_Revisor" name="REVISOR" processRef="Process_Revisor" />
+    <bpmn:participant id="Participant_Sistema" name="SISTEMA" processRef="Process_Sistema" />
+  </bpmn:collaboration>
+  
+  <bpmn:process id="Process_Autor" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_Autor" name="Crear Publicación">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <bpmn:userTask id="Task_CrearBorrador" name="Crear Borrador">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:userTask id="Task_EditarBorrador" name="Editar Borrador">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:userTask id="Task_EnviarRevision" name="Enviar a Revisión">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:intermediateCatchEvent id="Event_CambiosSolicitados" name="Cambios Solicitados">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_1" />
+    </bpmn:intermediateCatchEvent>
+    
+    <bpmn:endEvent id="EndEvent_Autor" name="Publicación Aprobada">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_Autor" targetRef="Task_CrearBorrador" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_CrearBorrador" targetRef="Task_EnviarRevision" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Event_CambiosSolicitados" targetRef="Task_EditarBorrador" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_EditarBorrador" targetRef="Task_EnviarRevision" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_EnviarRevision" targetRef="Event_EnviarRevision" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Event_CambiosSolicitados" targetRef="Event_CambiosSolicitados" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Event_Aprobacion" targetRef="EndEvent_Autor" />
+  </bpmn:process>
+  
+  <bpmn:process id="Process_Editor" isExecutable="true">
+    <bpmn:intermediateCatchEvent id="Event_EnviarRevision" name="Publicación Enviada">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_2" />
+    </bpmn:intermediateCatchEvent>
+    
+    <bpmn:userTask id="Task_AsignarRevisor" name="Asignar Revisor">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:userTask id="Task_AprobarPublicacion" name="Aprobar Publicación">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:userTask id="Task_Publicar" name="Publicar">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Event_EnviarRevision" targetRef="Task_AsignarRevisor" />
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_AsignarRevisor" targetRef="Event_AsignarRevisor" />
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Event_RevisionCompletada" targetRef="Task_AprobarPublicacion" />
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_AprobarPublicacion" targetRef="Task_Publicar" />
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_Publicar" targetRef="Event_PublicacionPublicada" />
+  </bpmn:process>
+  
+  <bpmn:process id="Process_Revisor" isExecutable="true">
+    <bpmn:intermediateCatchEvent id="Event_AsignarRevisor" name="Revisor Asignado">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_3" />
+    </bpmn:intermediateCatchEvent>
+    
+    <bpmn:userTask id="Task_Revisar" name="Revisar Publicación">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:exclusiveGateway id="Gateway_Decision" name="¿Aceptar?">
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+      <bpmn:outgoing>Flow_15</bpmn:outgoing>
+      <bpmn:outgoing>Flow_16</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <bpmn:userTask id="Task_Comentar" name="Comentar Cambios">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_15</bpmn:incoming>
+      <bpmn:outgoing>Flow_17</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Event_AsignarRevisor" targetRef="Task_Revisar" />
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_Revisar" targetRef="Gateway_Decision" />
+    <bpmn:sequenceFlow id="Flow_15" name="NO" sourceRef="Gateway_Decision" targetRef="Task_Comentar" />
+    <bpmn:sequenceFlow id="Flow_16" name="SI" sourceRef="Gateway_Decision" targetRef="Event_RevisionCompletada" />
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Task_Comentar" targetRef="Event_CambiosSolicitados" />
+  </bpmn:process>
+  
+  <bpmn:process id="Process_Sistema" isExecutable="true">
+    <bpmn:intermediateCatchEvent id="Event_PublicacionPublicada" name="Publicación Publicada">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_18</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_4" />
+    </bpmn:intermediateCatchEvent>
+    
+    <bpmn:serviceTask id="Task_EnviarCatalogo" name="Enviar al Catálogo">
+      <bpmn:incoming>Flow_18</bpmn:incoming>
+      <bpmn:outgoing>Flow_19</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:serviceTask id="Task_EnviarNotificaciones" name="Enviar Notificaciones">
+      <bpmn:incoming>Flow_19</bpmn:incoming>
+      <bpmn:outgoing>Flow_20</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:endEvent id="EndEvent_Sistema" name="Proceso Completado">
+      <bpmn:incoming>Flow_20</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Event_PublicacionPublicada" targetRef="Task_EnviarCatalogo" />
+    <bpmn:sequenceFlow id="Flow_19" sourceRef="Task_EnviarCatalogo" targetRef="Task_EnviarNotificaciones" />
+    <bpmn:sequenceFlow id="Flow_20" sourceRef="Task_EnviarNotificaciones" targetRef="EndEvent_Sistema" />
+  </bpmn:process>
+  
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1">
+      <bpmndi:BPMNShape id="Participant_Autor_di" bpmnElement="Participant_Autor" isHorizontal="true">
+        <dc:Bounds x="150" y="80" width="800" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Editor_di" bpmnElement="Participant_Editor" isHorizontal="true">
+        <dc:Bounds x="1000" y="80" width="800" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Revisor_di" bpmnElement="Participant_Revisor" isHorizontal="true">
+        <dc:Bounds x="1850" y="80" width="800" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Sistema_di" bpmnElement="Participant_Sistema" isHorizontal="true">
+        <dc:Bounds x="2700" y="80" width="800" height="300" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

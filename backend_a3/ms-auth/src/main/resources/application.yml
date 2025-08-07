@@ -34,6 +34,11 @@ jwt:
   secret: mysecretkey
   expiration: 3600 # in seconds
 
+# OpenTelemetry configuration
+opentelemetry:
+  jaeger:
+    endpoint: http://localhost:14250
+
 management:
   endpoints:
     web:

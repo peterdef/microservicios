@@ -6,12 +6,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import publicaciones.model.EstadoPublicacion;
 
+import java.util.UUID;
+
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class CambioEstadoDto {
+    
     private EstadoPublicacion nuevoEstado;
-    private String comentario;
-    private String rolUsuario;
+    private UUID usuarioId;
+    private String comentarios;
+    private String motivoCambio; // APROBACION, REVISION, CAMBIOS_SOLICITADOS, PUBLICACION
+    private String metadata; // JSON con datos adicionales
 }
