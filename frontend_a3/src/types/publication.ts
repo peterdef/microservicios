@@ -102,3 +102,28 @@ export interface PublicationSearchParams {
   categoria?: string;
   palabrasClave?: string[];
 }
+
+export interface CreatePublicationRequest {
+  titulo: string;
+  resumen: string;
+  contenido: string;
+  palabrasClave: string[];
+  tipo: string;
+  categoria: string;
+  autor: {
+    id: number;
+    nombres: string;
+    apellidos: string;
+    email: string;
+  };
+}
+
+export interface UpdatePublicationRequest {
+  titulo?: string;
+  resumen?: string;
+  contenido?: string;
+  palabrasClave?: string[];
+  tipo?: string;
+  categoria?: string;
+  estado?: string;
+}

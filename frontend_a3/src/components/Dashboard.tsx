@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { publicationService } from '../services/publicationService';
+import { reviewService } from '../services/reviewService';
 import { 
   FileText, 
   Users, 
@@ -60,33 +62,48 @@ interface Publication {
   id: number;
   titulo: string;
   resumen: string;
+  contenido: string;
   tipo: string;
   estado: string;
-  autorId: number;
-  autor: string;
+  autor: {
+    id: number;
+    nombres: string;
+    apellidos: string;
+    email: string;
+  };
   fechaCreacion: string;
   fechaPublicacion?: string;
   palabrasClave?: string[];
-  referencias?: string[];
-  metadata?: any;
-  isbn?: string;
-  numeroPaginas?: number;
-  edicion?: number;
-  capitulos?: any[];
+  categoria: string;
+  doi?: string;
+  citaciones: number;
 }
 
 interface Review {
   id: number;
-  publicacionId: number;
-  publicacionTitulo: string;
-  revisorId: number;
-  revisor: string;
+  publicacion: {
+    id: number;
+    titulo: string;
+    autor: {
+      id: number;
+      nombres: string;
+      apellidos: string;
+      email: string;
+    };
+  };
+  revisor: {
+    id: number;
+    nombres: string;
+    apellidos: string;
+    email: string;
+  };
   estado: string;
-  fechaAsignacion: string;
-  fechaInicio?: string;
-  prioridad: string;
+  comentarios?: string;
   recomendacion?: string;
-  comentarios?: any[];
+  fechaAsignacion: string;
+  fechaCompletado?: string;
+  puntuacion?: number;
+  aspectosEvaluados?: string[];
 }
 
 interface Notification {
@@ -104,8 +121,8 @@ interface Notification {
 export function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [publications, setPublications] = useState<Publication[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [publications, setPublications] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -120,72 +137,36 @@ export function Dashboard() {
         setLoading(true);
         setError('');
         
-        // Load dashboard statistics
-        const statsResponse = await fetch('/api/dashboard/stats', {
-          headers: {
-            'Authorization': `Bearer ${getAuthToken()}`
-          }
-        });
+        // Load publications and reviews using local services
+        const [publicationsData, reviewsData, publicationStats, reviewStats] = await Promise.all([
+          publicationService.getMyPublications(),
+          reviewService.getMyReviews(),
+          publicationService.getPublicationStats(),
+          reviewService.getReviewStats()
+        ]);
         
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setStats(statsData);
-        } else {
-          console.error('Error loading stats:', statsResponse.status, statsResponse.statusText);
-          if (statsResponse.status === 401) {
-            setError('Error de autenticación. Por favor, inicie sesión nuevamente.');
-          } else if (statsResponse.status === 404) {
-            setError('Servidor mock no disponible. Ejecute "node mock-server.js" en una nueva terminal.');
-          } else {
-            setError('No se pudieron cargar las estadísticas del dashboard.');
-          }
-        }
-
-        // Load user publications
-        const publicationsResponse = await fetch('/api/publicaciones/mis-publicaciones', {
-          headers: {
-            'Authorization': `Bearer ${getAuthToken()}`
-          }
-        });
+        setPublications(publicationsData);
+        setReviews(reviewsData);
         
-        if (publicationsResponse.ok) {
-          const publicationsData = await publicationsResponse.json();
-          setPublications(publicationsData.content || []);
-        } else {
-          console.error('Error loading publications:', publicationsResponse.status, publicationsResponse.statusText);
-        }
-
-        // Load user reviews
-        const reviewsResponse = await fetch('/api/reviews/mis-reviews', {
-          headers: {
-            'Authorization': `Bearer ${getAuthToken()}`
-          }
-        });
+        // Create dashboard stats from local data
+        const dashboardStats = {
+          totalPublications: publicationStats.total,
+          publishedPublications: publicationStats.byStatus.PUBLICADO || 0,
+          draftPublications: publicationStats.byStatus.BORRADOR || 0,
+          inReviewPublications: publicationStats.byStatus.EN_REVISION || 0,
+          totalReviews: reviewStats.total,
+          completedReviews: reviewStats.byStatus.COMPLETADA || 0,
+          pendingReviews: reviewStats.byStatus.PENDIENTE || 0,
+          unreadNotifications: 0, // Will be implemented later
+          totalNotifications: 0 // Will be implemented later
+        };
         
-        if (reviewsResponse.ok) {
-          const reviewsData = await reviewsResponse.json();
-          setReviews(reviewsData.content || []);
-        } else {
-          console.error('Error loading reviews:', reviewsResponse.status, reviewsResponse.statusText);
-        }
-
-        // Load user notifications
-        const notificationsResponse = await fetch('/api/notificaciones/mis-notificaciones', {
-          headers: {
-            'Authorization': `Bearer ${getAuthToken()}`
-          }
-        });
-        
-        if (notificationsResponse.ok) {
-          const notificationsData = await notificationsResponse.json();
-          setNotifications(notificationsData.content || []);
-        } else {
-          console.error('Error loading notifications:', notificationsResponse.status, notificationsResponse.statusText);
-        }
+        setStats(dashboardStats);
+        setNotifications([]); // Will be implemented later
 
       } catch (error) {
         console.error('Error loading dashboard data:', error);
-        setError('Error al cargar los datos del dashboard. Verifique que el servidor esté funcionando.');
+        setError('Error al cargar los datos del dashboard.');
       } finally {
         setLoading(false);
       }
@@ -194,7 +175,9 @@ export function Dashboard() {
     loadDashboardData();
   }, [user]);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | undefined) => {
+    if (!status) return 'bg-slate-100 text-slate-800';
+    
     const statusColors: { [key: string]: string } = {
       'BORRADOR': 'bg-slate-100 text-slate-800',
       'EN_REVISION': 'bg-amber-100 text-amber-800',
@@ -207,7 +190,9 @@ export function Dashboard() {
     return statusColors[status] || 'bg-slate-100 text-slate-800';
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string | undefined) => {
+    if (!status) return <FileText className="h-4 w-4" />;
+    
     const statusIcons: { [key: string]: React.ReactNode } = {
       'BORRADOR': <FileText className="h-4 w-4" />,
       'EN_REVISION': <Clock className="h-4 w-4" />,
@@ -220,7 +205,8 @@ export function Dashboard() {
     return statusIcons[status] || <FileText className="h-4 w-4" />;
   };
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = (type: string | undefined) => {
+    if (!type) return <FileText className="h-4 w-4" />;
     return type === 'ARTICULO' ? <FileText className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />;
   };
 
@@ -250,12 +236,17 @@ export function Dashboard() {
     return colors[type as keyof typeof colors] || 'text-blue-600 bg-blue-50';
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'Sin fecha';
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Fecha inválida';
+    }
   };
 
   const getRecentPublications = () => {
@@ -315,16 +306,7 @@ export function Dashboard() {
           <p className="text-gray-500 mb-4">
             {error || 'No se pudieron cargar las estadísticas del dashboard.'}
           </p>
-          {error.includes('servidor') && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800 font-medium mb-2">Para solucionar este problema:</p>
-              <ul className="text-sm text-yellow-700 space-y-1">
-                <li>• Verifique que el servidor mock esté corriendo</li>
-                <li>• Ejecute: <code className="bg-yellow-100 px-1 rounded">node mock-server.js</code></li>
-                <li>• Recargue la página</li>
-              </ul>
-            </div>
-          )}
+
           <button 
             onClick={() => window.location.reload()} 
             className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
@@ -352,18 +334,7 @@ export function Dashboard() {
             <div className="flex-1">
               <h3 className="text-sm font-medium text-red-800">Error en el dashboard</h3>
               <p className="text-sm text-red-700 mt-1">{error}</p>
-              {error.includes('mock') && (
-                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                  <p className="text-xs text-yellow-800 font-medium mb-2">Para solucionar:</p>
-                  <ol className="text-xs text-yellow-700 space-y-1">
-                    <li>1. Abra una nueva terminal</li>
-                    <li>2. Navegue al directorio del proyecto</li>
-                    <li>3. Ejecute: <code className="bg-yellow-100 px-1 rounded">node mock-server.js</code></li>
-                    <li>4. Espere el mensaje "Mock server running on http://localhost:8080"</li>
-                    <li>5. Recargue esta página</li>
-                  </ol>
-                </div>
-              )}
+
             </div>
             <button 
               onClick={() => setError('')} 
@@ -546,21 +517,21 @@ export function Dashboard() {
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-2">
                           {getTypeIcon(publication.tipo)}
-                          <span className="text-sm text-gray-500">{publication.tipo}</span>
+                          <span className="text-sm text-gray-500">{publication.tipo || 'Sin tipo'}</span>
                         </div>
                         <div className="flex-1">
                           <h3 className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                            {publication.titulo}
+                            {publication.titulo || 'Sin título'}
                           </h3>
-                          <p className="text-xs text-gray-500">
-                            {formatDate(publication.fechaCreacion)}
-                          </p>
+                                                      <p className="text-xs text-gray-500">
+                              {publication.fechaCreacion ? formatDate(publication.fechaCreacion) : 'Sin fecha'}
+                            </p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(publication.estado)}`}>
                           {getStatusIcon(publication.estado)}
-                          <span className="ml-1">{publication.estado.replace('_', ' ')}</span>
+                          <span className="ml-1">{publication.estado ? publication.estado.replace('_', ' ') : 'Sin estado'}</span>
                         </span>
                         {viewMode === 'list' && (
                           <div className="flex items-center space-x-1">
@@ -666,7 +637,7 @@ export function Dashboard() {
               <div className="space-y-4">
                 {publicationsByStatus.map((item) => (
                   <div key={item.status} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">{item.status.replace('_', ' ')}</span>
+                    <span className="text-sm text-gray-700">{item.status ? item.status.replace('_', ' ') : 'Sin estado'}</span>
                     <div className="flex items-center space-x-3">
                       <div className="w-24 bg-gray-200 rounded-full h-2">
                         <div 
@@ -694,15 +665,15 @@ export function Dashboard() {
                   <div key={review.id} className="flex items-center justify-between p-3 bg-white/50 rounded-xl border border-gray-100 hover:bg-white/80 transition-all duration-200">
                     <div>
                       <h4 className="text-sm font-semibold text-gray-900">
-                        {review.publicacionTitulo}
+                        {review.publicacion?.titulo || 'Sin título'}
                       </h4>
-                      <p className="text-xs text-gray-500">{formatDate(review.fechaAsignacion)}</p>
-                      <p className="text-xs text-gray-400">{review.revisor}</p>
+                      <p className="text-xs text-gray-500">{review.fechaAsignacion ? formatDate(review.fechaAsignacion) : 'Sin fecha'}</p>
+                      <p className="text-xs text-gray-400">{review.revisor?.nombres} {review.revisor?.apellidos}</p>
                     </div>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(review.estado)}`}>
-                      {getStatusIcon(review.estado)}
-                      <span className="ml-1">{review.estado.replace('_', ' ')}</span>
-                    </span>
+                                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(review.estado)}`}>
+                        {getStatusIcon(review.estado)}
+                        <span className="ml-1">{review.estado ? review.estado.replace('_', ' ') : 'Sin estado'}</span>
+                      </span>
                   </div>
                 ))}
               </div>

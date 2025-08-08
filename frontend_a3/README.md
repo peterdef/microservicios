@@ -1,6 +1,6 @@
 # Sistema de Gestión de Publicaciones Académicas
 
-Sistema integral para la gestión de publicaciones académicas con persistencia de datos dinámica y sistema de respaldo automático.
+Sistema integral para la gestión de publicaciones académicas con datos quemados para inicio de sesión y sistema de backup para nuevos registros.
 
 ## 🚀 Inicio Rápido
 
@@ -12,15 +12,9 @@ Sistema integral para la gestión de publicaciones académicas con persistencia 
 
 ### Opción 2: Inicio Manual
 
-#### 1. Iniciar Servidor Mock
+#### 1. Iniciar Frontend
 ```bash
-# Terminal 1 - Servidor Mock
-node mock-server.js
-```
-
-#### 2. Iniciar Frontend
-```bash
-# Terminal 2 - Frontend
+# Terminal - Frontend
 npm run dev
 ```
 
@@ -38,38 +32,35 @@ npm install
 ## 🌐 URLs de Acceso
 
 - **Frontend**: http://localhost:3000
-- **Servidor Mock**: http://localhost:8080
 
-## 👤 Credenciales de Prueba
+## 👤 Credenciales de Prueba (Datos Quemados)
 
 | Usuario | Contraseña | Rol |
 |---------|------------|-----|
-| autor | password | Autor |
-| revisor | password | Revisor |
-| editor | password | Editor |
-| admin | password | Administrador |
-| lector | password | Lector |
+| autor@test.com | password | Autor |
+| revisor@test.com | password | Revisor |
+| editor@test.com | password | Editor |
+| admin@test.com | password | Administrador |
+| lector@test.com | password | Lector |
 
-## 🗄️ Persistencia de Datos
+## 💾 Sistema de Datos
 
-### Archivos de Datos
-- **Usuarios**: `data/users.json`
-- **Publicaciones**: `data/publications.json`
-- **Revisiones**: `data/reviews.json`
-- **Notificaciones**: `data/notifications.json`
-- **Respaldos**: `data/backups/`
+### Datos Quemados
+- **Usuarios de prueba**: 5 usuarios predefinidos para inicio de sesión
+- **Persistencia**: Almacenados en localStorage del navegador
+- **Backup automático**: Los nuevos registros se guardan automáticamente
 
-### Sistema de Respaldos
-- **Automático**: Cada 10 operaciones
-- **Manual**: Desde el panel de administración
-- **Restauración**: Desde respaldos guardados
-- **Limpieza**: Eliminación automática de respaldos antiguos
+### Sistema de Backup
+- **Registro de usuarios**: Los nuevos usuarios se guardan en backup
+- **Persistencia**: Datos almacenados en localStorage
+- **Gestión**: Panel de administración para gestionar backups
+- **Exportación/Importación**: Funcionalidad completa de respaldos
 
-## 🔌 Endpoints API
+## 🔌 Funcionalidades
 
 ### Autenticación
-- `POST /api/auth/login` - Iniciar sesión
-- `POST /api/auth/register` - Registro de usuario
+- `POST /api/auth/login` - Iniciar sesión (datos quemados + backup)
+- `POST /api/auth/register` - Registro de usuario (se guarda en backup)
 - `GET /api/auth/me` - Información del usuario actual
 
 ### Publicaciones
@@ -92,15 +83,18 @@ npm install
 - `GET /api/dashboard/stats` - Estadísticas del dashboard
 
 ### Administración
-- `GET /api/admin/users` - Gestión de usuarios
+- `GET /api/admin/users` - Gestión de usuarios (hardcoded + backup)
 - `POST /api/admin/backup` - Crear respaldo
 - `GET /api/admin/backups` - Listar respaldos
 - `POST /api/admin/backup/restore/:name` - Restaurar respaldo
 - `DELETE /api/admin/backup/:name` - Eliminar respaldo
 - `POST /api/admin/export` - Exportar datos
-- `POST /api/admin/import` - Importar datos
-- `GET /api/admin/stats` - Estadísticas del sistema
-- `POST /api/admin/backup/clean` - Limpiar respaldos antiguos
+
+### Panel Editorial
+- `GET /admin/editorial` - Panel de gestión editorial
+- Estadísticas de publicaciones y revisiones
+- Gestión de revisores y métricas de rendimiento
+- Análisis de tasas de éxito y tiempos de revisión
 
 ## 🎯 Características Principales
 
@@ -122,12 +116,12 @@ npm install
 - Filtros por categoría y tipo de publicación
 - Ordenamiento por fecha y título
 - Paginación de resultados
-- Datos obtenidos dinámicamente del backup
 
 ### 👥 Sistema de Usuarios
-- Roles diferenciados (Autor, Revisor, Editor, Admin, Lector)
-- Gestión de permisos
-- Perfiles de usuario
+- **Datos quemados**: 5 usuarios de prueba predefinidos
+- **Registro dinámico**: Nuevos usuarios se guardan en backup
+- **Roles diferenciados**: Autor, Revisor, Editor, Admin, Lector
+- **Gestión de permisos**: Panel de administración completo
 
 ### 🔍 Sistema de Revisiones
 - Asignación de revisores
@@ -140,42 +134,54 @@ npm install
 - Configuración de preferencias
 - Diferentes tipos de notificación
 
-### 💾 Sistema de Respaldos
-- Respaldos automáticos
-- Respaldos manuales
-- Restauración de datos
-- Exportación/Importación
+### 💾 Sistema de Backup
+- **Backup automático**: Al registrar nuevos usuarios
+- **Backup manual**: Desde el panel de administración
+- **Restauración**: Desde respaldos guardados
+- **Exportación/Importación**: Funcionalidad completa
+- **Gestión**: Panel de administración para backups
+
+### 📊 Panel Editorial
+- **Estadísticas en tiempo real**: Total de publicaciones, reviews pendientes, tasa de éxito
+- **Gestión de revisores**: Top revisores con métricas de rendimiento
+- **Publicaciones recientes**: Lista de las últimas publicaciones con estados
+- **Métricas avanzadas**: Tiempo promedio de revisión, revisores activos
+- **Navegación por pestañas**: Resumen, Publicaciones, Revisiones, Revisores, Analíticas
+
+### 🔍 Auditoría del Sistema
+- **Logs de actividad**: Registro completo de acciones del sistema
+- **Filtros avanzados**: Por fecha, usuario, acción, estado, severidad
+- **Exportación de logs**: Descarga en formato CSV
+- **Estadísticas de auditoría**: Métricas de actividad y eventos críticos
+- **Navegación por pestañas**: Resumen, Logs de Actividad, Filtros, Reportes
+
+### ⚙️ Configuración del Sistema
+- **Configuración general**: Nombre del sitio, zona horaria, idioma, modo mantenimiento
+- **Configuración de seguridad**: Contraseñas, sesiones, autenticación de dos factores
+- **Configuración de email**: Servidor SMTP, notificaciones por email
+- **Configuración de notificaciones**: Frecuencia, retención, tipos de notificación
+- **Configuración de almacenamiento**: Archivos, backup, compresión, proveedores
+- **Configuración de rendimiento**: Cache, CDN, optimización, usuarios concurrentes
 
 ## 🛠️ Solución de Problemas
-
-### Error 404 en Dashboard
-Si aparece "Error loading stats: 404 Not Found":
-
-1. **Verificar que el servidor mock esté corriendo**:
-   ```bash
-   node mock-server.js
-   ```
-
-2. **Verificar que aparezca el mensaje**:
-   ```
-   Mock server running on http://localhost:8080
-   ```
-
-3. **Recargar la página del dashboard**
 
 ### Error de Autenticación
 Si aparece "Error de autenticación":
 
-1. **Cerrar sesión y volver a iniciar**
-2. **Verificar credenciales de prueba**
-3. **Limpiar localStorage del navegador**
+1. **Verificar credenciales de prueba** (ver tabla arriba)
+2. **Limpiar localStorage del navegador**
+3. **Reiniciar el navegador**
 
-### Error de Conectividad
-Si no se pueden cargar los datos:
+### Gestión de Usuarios
+- **Usuarios hardcoded**: No se pueden eliminar (son de prueba)
+- **Usuarios registrados**: Se pueden gestionar desde el panel de admin
+- **Backup**: Los nuevos usuarios se guardan automáticamente
 
-1. **Verificar que ambos servidores estén corriendo**
-2. **Verificar puertos 3000 y 8080**
-3. **Revisar consola del navegador para errores**
+### Panel de Administración
+- **Acceso**: Solo usuarios con rol ROLE_ADMIN
+- **Gestión de usuarios**: Ver, editar y eliminar usuarios registrados
+- **Sistema de backup**: Crear, restaurar y eliminar respaldos
+- **Estadísticas**: Información detallada del sistema
 
 ## 📁 Estructura del Proyecto
 
@@ -187,31 +193,24 @@ frontend_a3/
 │   ├── contexts/           # Contextos de React
 │   ├── services/           # Servicios de API
 │   └── types/              # Tipos TypeScript
-├── data/                   # Datos persistentes
-│   ├── users.json
-│   ├── publications.json
-│   ├── reviews.json
-│   ├── notifications.json
-│   └── backups/
-├── mock-server.js          # Servidor mock
 ├── start-dev.ps1          # Script de inicio
 └── README.md
 ```
 
 ## 🔄 Scripts Disponibles
 
-- `.\start-dev.ps1` - Inicia todo el entorno de desarrollo
-- `.\start-mock-server.ps1` - Solo inicia el servidor mock
+- `.\start-dev.ps1` - Inicia el entorno de desarrollo
 - `npm run dev` - Solo inicia el frontend
-- `node check-server.js` - Verifica si el servidor mock está funcionando
 
 ## 📈 Características Avanzadas
 
 ### Panel de Administración
-- Gestión completa de usuarios
-- Sistema de respaldos
-- Estadísticas del sistema
-- Monitoreo de salud
+- **Gestión de usuarios**: Lista completa, filtros, exportación, estadísticas
+- **Sistema de respaldos**: Crear, restaurar, eliminar respaldos
+- **Auditoría del sistema**: Logs de actividad, filtros, exportación
+- **Configuración del sistema**: General, seguridad, email, notificaciones, almacenamiento, rendimiento
+- **Estadísticas del sistema**: Métricas detalladas de usuarios y actividad
+- **Monitoreo de salud**: Estado del sistema y validación de integridad
 
 ### Sistema de Roles
 - **Autor**: Crear y gestionar publicaciones
@@ -221,10 +220,10 @@ frontend_a3/
 - **Lector**: Acceso de solo lectura
 
 ### Persistencia de Datos
-- Almacenamiento en JSON
-- Respaldos automáticos
-- Restauración de datos
-- Exportación/Importación
+- **Datos quemados**: Usuarios de prueba predefinidos
+- **Backup automático**: Al registrar nuevos usuarios
+- **localStorage**: Almacenamiento en el navegador
+- **Exportación/Importación**: Funcionalidad completa
 
 ## 🤝 Contribución
 

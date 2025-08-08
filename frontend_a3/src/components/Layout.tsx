@@ -27,6 +27,7 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { hasPermission, ROLES, ACTOR_DESCRIPTIONS } from '../types/auth';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -38,29 +39,102 @@ export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home, roles: ['ROLE_AUTOR', 'ROLE_REVISOR', 'ROLE_EDITOR', 'ROLE_ADMIN', 'ROLE_LECTOR'] },
-    { name: 'Publicaciones', href: '/publications', icon: FileText, roles: ['ROLE_AUTOR', 'ROLE_EDITOR', 'ROLE_ADMIN'] },
-    { name: 'Crear Publicación', href: '/publications/create', icon: Plus, roles: ['ROLE_AUTOR'] },
-    { name: 'Catálogo', href: '/catalog', icon: BookOpen, roles: ['ROLE_AUTOR', 'ROLE_REVISOR', 'ROLE_EDITOR', 'ROLE_ADMIN', 'ROLE_LECTOR'] },
-    { name: 'Revisiones', href: '/reviews', icon: Eye, roles: ['ROLE_REVISOR', 'ROLE_EDITOR', 'ROLE_ADMIN'] },
-    { name: 'Notificaciones', href: '/notifications', icon: Bell, roles: ['ROLE_AUTOR', 'ROLE_REVISOR', 'ROLE_EDITOR', 'ROLE_ADMIN'] },
-    { name: 'Config. Notificaciones', href: '/notifications/settings', icon: Settings, roles: ['ROLE_AUTOR', 'ROLE_REVISOR', 'ROLE_EDITOR', 'ROLE_ADMIN'] },
+    { 
+      name: 'Dashboard', 
+      href: '/dashboard', 
+      icon: Home, 
+      permission: 'dashboard:read',
+      roles: [ROLES.ADMIN, ROLES.EDITOR, ROLES.REVISOR, ROLES.AUTOR, ROLES.LECTOR] 
+    },
+    { 
+      name: 'Publicaciones', 
+      href: '/publications', 
+      icon: FileText, 
+      permission: 'publications:read',
+      roles: [ROLES.AUTOR, ROLES.EDITOR, ROLES.ADMIN] 
+    },
+    { 
+      name: 'Crear Publicación', 
+      href: '/publications/create', 
+      icon: Plus, 
+      permission: 'publications:write',
+      roles: [ROLES.AUTOR] 
+    },
+    { 
+      name: 'Catálogo', 
+      href: '/catalog', 
+      icon: BookOpen, 
+      permission: 'catalog:read_published',
+      roles: [ROLES.AUTOR, ROLES.REVISOR, ROLES.EDITOR, ROLES.ADMIN, ROLES.LECTOR] 
+    },
+    { 
+      name: 'Revisiones', 
+      href: '/reviews', 
+      icon: Eye, 
+      permission: 'reviews:read',
+      roles: [ROLES.REVISOR, ROLES.EDITOR, ROLES.ADMIN] 
+    },
+    { 
+      name: 'Notificaciones', 
+      href: '/notifications', 
+      icon: Bell, 
+      permission: 'notifications:read',
+      roles: [ROLES.AUTOR, ROLES.REVISOR, ROLES.EDITOR, ROLES.ADMIN] 
+    },
+    { 
+      name: 'Config. Notificaciones', 
+      href: '/notifications/settings', 
+      icon: Settings, 
+      permission: 'notifications:write',
+      roles: [ROLES.AUTOR, ROLES.REVISOR, ROLES.EDITOR, ROLES.ADMIN] 
+    },
   ];
 
   const adminNavigation = [
-    { name: 'Panel Editorial', href: '/admin/editorial', icon: BarChart3, roles: ['ROLE_EDITOR', 'ROLE_ADMIN'] },
-    { name: 'Auditoría', href: '/admin/audit', icon: Activity, roles: ['ROLE_ADMIN'] },
-    { name: 'Gestión de Usuarios', href: '/admin/users', icon: Users, roles: ['ROLE_ADMIN'] },
-    { name: 'Configuración del Sistema', href: '/admin/system', icon: Database, roles: ['ROLE_ADMIN'] },
+    { 
+      name: 'Panel Editorial', 
+      href: '/admin/editorial', 
+      icon: BarChart3, 
+      permission: 'editorial:access',
+      roles: [ROLES.EDITOR, ROLES.ADMIN] 
+    },
+    { 
+      name: 'Gestión de Revisiones', 
+      href: '/admin/reviews', 
+      icon: Eye, 
+      permission: 'reviews:write',
+      roles: [ROLES.EDITOR, ROLES.ADMIN] 
+    },
+    { 
+      name: 'Auditoría', 
+      href: '/admin/audit', 
+      icon: Activity, 
+      permission: 'audit:access',
+      roles: [ROLES.ADMIN] 
+    },
+    { 
+      name: 'Gestión de Usuarios', 
+      href: '/admin/users', 
+      icon: Users, 
+      permission: 'users:read',
+      roles: [ROLES.ADMIN] 
+    },
+    { 
+      name: 'Configuración del Sistema', 
+      href: '/admin/settings', 
+      icon: Database, 
+      permission: 'settings:access',
+      roles: [ROLES.ADMIN] 
+    },
   ];
 
-  const hasRole = (requiredRoles: string[]) => {
+  const hasPermissionForItem = (item: any) => {
     if (!user) return false;
-    return user.roles.some(role => requiredRoles.includes(role));
+    return hasPermission(user.roles, item.permission);
   };
 
-  const filteredNavigation = navigation.filter(item => hasRole(item.roles));
-  const filteredAdminNavigation = adminNavigation.filter(item => hasRole(item.roles));
+  const filteredNavigation = navigation.filter(hasPermissionForItem);
+  const filteredAdminNavigation = adminNavigation.filter(hasPermissionForItem);
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -70,33 +144,55 @@ export function Layout({ children }: LayoutProps) {
   };
 
   const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'ROLE_ADMIN':
-        return <Crown className="w-4 h-4" />;
-      case 'ROLE_EDITOR':
-        return <Briefcase className="w-4 h-4" />;
-      case 'ROLE_REVISOR':
-        return <Award className="w-4 h-4" />;
-      case 'ROLE_AUTOR':
-        return <FileText className="w-4 h-4" />;
-      default:
-        return <User className="w-4 h-4" />;
+    const actorDesc = ACTOR_DESCRIPTIONS[role as keyof typeof ACTOR_DESCRIPTIONS];
+    if (actorDesc) {
+      switch (actorDesc.icon) {
+        case 'Crown':
+          return <Crown className="w-4 h-4" />;
+        case 'Briefcase':
+          return <Briefcase className="w-4 h-4" />;
+        case 'Eye':
+          return <Award className="w-4 h-4" />;
+        case 'FileText':
+          return <FileText className="w-4 h-4" />;
+        case 'BookOpen':
+          return <BookOpen className="w-4 h-4" />;
+        default:
+          return <User className="w-4 h-4" />;
+      }
     }
+    return <User className="w-4 h-4" />;
   };
 
   const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'ROLE_ADMIN':
-        return 'bg-gradient-to-r from-purple-500 to-pink-500';
-      case 'ROLE_EDITOR':
-        return 'bg-gradient-to-r from-blue-500 to-indigo-500';
-      case 'ROLE_REVISOR':
-        return 'bg-gradient-to-r from-amber-500 to-orange-500';
-      case 'ROLE_AUTOR':
-        return 'bg-gradient-to-r from-emerald-500 to-green-500';
-      default:
-        return 'bg-gradient-to-r from-gray-500 to-slate-500';
+    const actorDesc = ACTOR_DESCRIPTIONS[role as keyof typeof ACTOR_DESCRIPTIONS];
+    if (actorDesc) {
+      switch (actorDesc.color) {
+        case 'purple':
+          return 'bg-gradient-to-r from-purple-500 to-pink-500';
+        case 'blue':
+          return 'bg-gradient-to-r from-blue-500 to-indigo-500';
+        case 'amber':
+          return 'bg-gradient-to-r from-amber-500 to-orange-500';
+        case 'emerald':
+          return 'bg-gradient-to-r from-emerald-500 to-green-500';
+        case 'gray':
+          return 'bg-gradient-to-r from-gray-500 to-slate-500';
+        default:
+          return 'bg-gradient-to-r from-gray-500 to-slate-500';
+      }
     }
+    return 'bg-gradient-to-r from-gray-500 to-slate-500';
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    const actorDesc = ACTOR_DESCRIPTIONS[role as keyof typeof ACTOR_DESCRIPTIONS];
+    return actorDesc ? actorDesc.name : role.replace('ROLE_', '');
+  };
+
+  const getRoleDescription = (role: string) => {
+    const actorDesc = ACTOR_DESCRIPTIONS[role as keyof typeof ACTOR_DESCRIPTIONS];
+    return actorDesc ? actorDesc.description : '';
   };
 
   if (!isAuthenticated) {
@@ -159,9 +255,14 @@ export function Layout({ children }: LayoutProps) {
               <div className="mt-2">
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(user?.roles[0] || '')} text-white shadow-sm`}>
                   {getRoleIcon(user?.roles[0] || '')}
-                  <span className="ml-1">{user?.roles[0]?.replace('ROLE_', '')}</span>
+                  <span className="ml-1">{getRoleDisplayName(user?.roles[0] || '')}</span>
                 </span>
               </div>
+              {user?.roles[0] && (
+                <p className="text-xs text-gray-500 mt-1 leading-tight">
+                  {getRoleDescription(user.roles[0])}
+                </p>
+              )}
             </div>
           </div>
         </div>

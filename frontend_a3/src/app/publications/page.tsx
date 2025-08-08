@@ -37,7 +37,7 @@ import Link from 'next/link';
 export default function PublicationsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const [publications, setPublications] = useState<Publication[]>([]);
+  const [publications, setPublications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,7 +57,7 @@ export default function PublicationsPage() {
       
       // Fetch all publications for the current user
       const response = await publicationService.getMyPublications();
-      const fetchedPublications = response.content || response; // Handle both paginated and direct array responses
+      const fetchedPublications = response; // Handle both paginated and direct array responses
       setPublications(fetchedPublications);
       setTotalPages(Math.ceil(fetchedPublications.length / 5));
     } catch (error: any) {
@@ -91,7 +91,9 @@ export default function PublicationsPage() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [isAuthenticated]);
 
-  const getStatusColor = (status: PublicationStatus) => {
+  const getStatusColor = (status: PublicationStatus | undefined) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
+    
     const statusColors: { [key in PublicationStatus]: string } = {
       [PublicationStatus.BORRADOR]: 'bg-slate-100 text-slate-800',
       [PublicationStatus.EN_REVISION]: 'bg-amber-100 text-amber-800',
@@ -100,10 +102,12 @@ export default function PublicationsPage() {
       [PublicationStatus.PUBLICADO]: 'bg-blue-100 text-blue-800',
       [PublicationStatus.RETIRADO]: 'bg-red-100 text-red-800'
     };
-    return statusColors[status];
+    return statusColors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const getStatusIcon = (status: PublicationStatus) => {
+  const getStatusIcon = (status: PublicationStatus | undefined) => {
+    if (!status) return <FileText className="h-4 w-4" />;
+    
     const statusIcons: { [key in PublicationStatus]: React.ReactNode } = {
       [PublicationStatus.BORRADOR]: <FileText className="h-4 w-4" />,
       [PublicationStatus.EN_REVISION]: <Clock className="h-4 w-4" />,
@@ -112,10 +116,11 @@ export default function PublicationsPage() {
       [PublicationStatus.PUBLICADO]: <Star className="h-4 w-4" />,
       [PublicationStatus.RETIRADO]: <AlertCircle className="h-4 w-4" />
     };
-    return statusIcons[status];
+    return statusIcons[status] || <FileText className="h-4 w-4" />;
   };
 
-  const getTypeIcon = (type: PublicationType) => {
+  const getTypeIcon = (type: PublicationType | undefined) => {
+    if (!type) return <FileText className="h-4 w-4" />;
     return type === PublicationType.ARTICULO ? <FileText className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />;
   };
 
@@ -130,7 +135,7 @@ export default function PublicationsPage() {
           break;
         case 'delete':
           if (confirm('¿Estás seguro de que quieres eliminar esta publicación?')) {
-            await publicationService.deletePublication(publicationId);
+            await publicationService.deletePublication(parseInt(publicationId));
             // Refresh the publications list
             fetchPublications();
           }
@@ -469,11 +474,11 @@ export default function PublicationsPage() {
                         <div className="flex items-center space-x-2">
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(publication.estado)}`}>
                             {getStatusIcon(publication.estado)}
-                            <span className="ml-1">{publication.estado.replace('_', ' ')}</span>
+                            <span className="ml-1">{publication.estado ? publication.estado.replace('_', ' ') : 'Sin estado'}</span>
                           </span>
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                             {getTypeIcon(publication.tipo)}
-                            <span className="ml-1">{publication.tipo}</span>
+                            <span className="ml-1">{publication.tipo || 'Sin tipo'}</span>
                           </span>
                         </div>
                       </div>
@@ -483,7 +488,7 @@ export default function PublicationsPage() {
                       <div className="flex items-center space-x-6 text-xs text-gray-500 mb-4">
                         <div className="flex items-center space-x-1">
                           <User className="h-3 w-3" />
-                          <span>{publication.autor || 'Autor'}</span>
+                          <span>{publication.autor?.nombres} {publication.autor?.apellidos || 'Autor'}</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Calendar className="h-3 w-3" />

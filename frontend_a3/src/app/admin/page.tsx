@@ -29,6 +29,7 @@ import {
   Server,
   Cpu,
   Memory,
+  Info,
   HardDrive as HardDriveIcon
 } from 'lucide-react';
 
@@ -412,7 +413,58 @@ export default function AdminPage() {
               <h3 className="text-lg font-semibold text-gray-900">Gestión de Usuarios</h3>
             </div>
             <div className="p-6">
-              <p className="text-gray-500">Funcionalidad de gestión de usuarios próximamente...</p>
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-gray-900 mb-4">Usuarios del Sistema</h4>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center">
+                    <Info className="h-5 w-5 text-blue-600 mr-2" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">Información sobre usuarios</p>
+                      <p className="text-sm text-blue-700 mt-1">
+                        Los usuarios hardcoded (de prueba) no se pueden eliminar. Solo los usuarios registrados pueden ser gestionados.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {systemStats?.users && Object.entries(systemStats.users.byRole).map(([role, count]) => (
+                      <div key={role} className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{role.replace('ROLE_', '')}</p>
+                            <p className="text-2xl font-bold text-gray-900">{count}</p>
+                          </div>
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <Users className="h-5 w-5 text-blue-600" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="border-t border-gray-200 pt-6">
+                <h4 className="text-md font-medium text-gray-900 mb-4">Acciones de Usuario</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button 
+                    onClick={handleExportData}
+                    className="btn-secondary flex items-center justify-center"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar Usuarios
+                  </button>
+                  <button 
+                    onClick={() => window.location.href = '/register'}
+                    className="btn-primary flex items-center justify-center"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Registrar Nuevo Usuario
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -427,7 +479,7 @@ export default function AdminPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Servidor</span>
-                  <span className="text-sm font-medium">Mock Server v2.0</span>
+                  <span className="text-sm font-medium">API Server</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Persistencia</span>

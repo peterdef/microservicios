@@ -74,24 +74,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.refreshToken();
       
       const user: User = {
-        username: response.username,
-        nombres: response.nombres,
-        apellidos: response.apellidos,
-        email: response.email,
-        roles: response.roles,
-        afiliacion: response.afiliacion,
-        orcid: response.orcid,
-        biografia: response.biografia,
-        fotoUrl: response.fotoUrl,
+        username: response.user.email, // Usar email como username
+        nombres: response.user.nombres,
+        apellidos: response.user.apellidos,
+        email: response.user.email,
+        roles: response.user.roles,
+        afiliacion: '', // Valor por defecto
+        orcid: '', // Valor por defecto
+        biografia: '', // Valor por defecto
+        fotoUrl: '', // Valor por defecto
       };
 
-      tokenUtils.setToken(response.accessToken);
+      tokenUtils.setToken(response.token);
       tokenUtils.setRefreshToken(response.refreshToken);
       tokenUtils.setUser(user);
 
       setAuthState({
         user,
-        token: response.accessToken,
+        token: response.token,
         isAuthenticated: true,
         isLoading: false,
       });
@@ -107,24 +107,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.login(credentials);
       
       const user: User = {
-        username: response.username,
-        nombres: response.nombres,
-        apellidos: response.apellidos,
-        email: response.email,
-        roles: response.roles,
-        afiliacion: response.afiliacion,
-        orcid: response.orcid,
-        biografia: response.biografia,
-        fotoUrl: response.fotoUrl,
+        username: response.user.email, // Usar email como username
+        nombres: response.user.nombres,
+        apellidos: response.user.apellidos,
+        email: response.user.email,
+        roles: response.user.roles,
+        afiliacion: '', // Valor por defecto
+        orcid: '', // Valor por defecto
+        biografia: '', // Valor por defecto
+        fotoUrl: '', // Valor por defecto
       };
 
-      tokenUtils.setToken(response.accessToken);
+      tokenUtils.setToken(response.token);
       tokenUtils.setRefreshToken(response.refreshToken);
       tokenUtils.setUser(user);
 
       setAuthState({
         user,
-        token: response.accessToken,
+        token: response.token,
         isAuthenticated: true,
         isLoading: false,
       });
@@ -143,24 +143,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.register(registrationData);
       
       const user: User = {
-        username: response.username,
-        nombres: response.nombres,
-        apellidos: response.apellidos,
-        email: response.email,
-        roles: response.roles,
-        afiliacion: response.afiliacion,
-        orcid: response.orcid,
-        biografia: response.biografia,
-        fotoUrl: response.fotoUrl,
+        username: response.user.email, // Usar email como username
+        nombres: response.user.nombres,
+        apellidos: response.user.apellidos,
+        email: response.user.email,
+        roles: response.user.roles,
+        afiliacion: '', // Valor por defecto
+        orcid: '', // Valor por defecto
+        biografia: '', // Valor por defecto
+        fotoUrl: '', // Valor por defecto
       };
 
-      tokenUtils.setToken(response.accessToken);
+      tokenUtils.setToken(response.token);
       tokenUtils.setRefreshToken(response.refreshToken);
       tokenUtils.setUser(user);
 
       setAuthState({
         user,
-        token: response.accessToken,
+        token: response.token,
         isAuthenticated: true,
         isLoading: false,
       });

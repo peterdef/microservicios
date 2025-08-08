@@ -1,78 +1,79 @@
-Write-Host "Starting development environment with dynamic data persistence..." -ForegroundColor Green
+# Script de inicio para el sistema de gestión de publicaciones académicas
+# Con funcionalidad completa de datos mock y flujo real
+
+Write-Host "🚀 Iniciando Sistema de Gestión de Publicaciones Académicas" -ForegroundColor Cyan
 Write-Host ""
 
-Write-Host "Starting mock server with data persistence and automatic backups..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "node mock-server.js" -WindowStyle Normal
+# Verificar si Node.js está instalado
+try {
+    $nodeVersion = node --version
+    Write-Host "✅ Node.js encontrado: $nodeVersion" -ForegroundColor Green
+} catch {
+    Write-Host "❌ Node.js no está instalado. Por favor, instala Node.js desde https://nodejs.org/" -ForegroundColor Red
+    exit 1
+}
 
-Write-Host "Waiting for mock server to start..." -ForegroundColor Yellow
-Start-Sleep -Seconds 3
+# Verificar si npm está instalado
+try {
+    $npmVersion = npm --version
+    Write-Host "✅ npm encontrado: $npmVersion" -ForegroundColor Green
+} catch {
+    Write-Host "❌ npm no está instalado." -ForegroundColor Red
+    exit 1
+}
 
-Write-Host "Starting frontend development server..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "npm run dev" -WindowStyle Normal
+Write-Host ""
+Write-Host "📦 Instalando dependencias..." -ForegroundColor Yellow
+npm install
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Error al instalar dependencias" -ForegroundColor Red
+    exit 1
+}
 
 Write-Host ""
-Write-Host "Development environment started with dynamic data persistence!" -ForegroundColor Green
+Write-Host "🔧 Configurando datos mock..." -ForegroundColor Yellow
+
+# Crear archivo de configuración temporal para datos mock
+$mockConfig = @"
+// Configuración de datos mock para simulación real
+window.MOCK_CONFIG = {
+  enableRealFlow: true,
+  simulateDelays: true,
+  autoIncrementStats: true,
+  enableNotifications: true,
+  dataPersistence: true
+};
+"@
+
+$mockConfig | Out-File -FilePath "public/mock-config.js" -Encoding UTF8
+
 Write-Host ""
-Write-Host "Mock Server: http://localhost:8080" -ForegroundColor Cyan
-Write-Host "Frontend: http://localhost:3000" -ForegroundColor Cyan
+Write-Host "🌐 Iniciando servidor de desarrollo..." -ForegroundColor Yellow
+Write-Host "📍 URL: http://localhost:3000" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Data Persistence Features:" -ForegroundColor White
-Write-Host "- Automatic data saving to JSON files" -ForegroundColor Gray
-Write-Host "- Automatic backup creation" -ForegroundColor Gray
-Write-Host "- Dynamic dashboard with real-time data" -ForegroundColor Gray
-Write-Host "- Complete CRUD operations" -ForegroundColor Gray
-Write-Host "- User registration and management" -ForegroundColor Gray
-Write-Host "- Publication creation and editing" -ForegroundColor Gray
-Write-Host "- Review assignment and management" -ForegroundColor Gray
-Write-Host "- Notification system" -ForegroundColor Gray
+
+Write-Host "📋 Credenciales de prueba disponibles:" -ForegroundColor Green
+Write-Host "   👤 Autor: autor@test.com / password" -ForegroundColor White
+Write-Host "   👤 Revisor: revisor@test.com / password" -ForegroundColor White
+Write-Host "   👤 Editor: editor@test.com / password" -ForegroundColor White
+Write-Host "   👤 Admin: admin@test.com / password" -ForegroundColor White
+Write-Host "   👤 Lector: lector@test.com / password" -ForegroundColor White
+
 Write-Host ""
-Write-Host "Backup System Features:" -ForegroundColor White
-Write-Host "- Automatic backups every 10 operations" -ForegroundColor Gray
-Write-Host "- Manual backup creation" -ForegroundColor Gray
-Write-Host "- Backup restoration functionality" -ForegroundColor Gray
-Write-Host "- Backup deletion and cleanup" -ForegroundColor Gray
-Write-Host "- Data export and import" -ForegroundColor Gray
-Write-Host "- System statistics and monitoring" -ForegroundColor Gray
+Write-Host "🎯 Funcionalidades disponibles:" -ForegroundColor Green
+Write-Host "   ✅ Autenticación completa con datos mock" -ForegroundColor White
+Write-Host "   ✅ Gestión de publicaciones con flujo real" -ForegroundColor White
+Write-Host "   ✅ Sistema de revisiones simulado" -ForegroundColor White
+Write-Host "   ✅ Notificaciones en tiempo real" -ForegroundColor White
+Write-Host "   ✅ Panel de administración completo" -ForegroundColor White
+Write-Host "   ✅ Texto negro en todos los campos de entrada" -ForegroundColor White
+Write-Host "   ✅ Persistencia de datos en localStorage" -ForegroundColor White
+Write-Host "   ✅ Exportación/Importación de datos" -ForegroundColor White
+
 Write-Host ""
-Write-Host "Data Storage:" -ForegroundColor White
-Write-Host "- Users: data/users.json" -ForegroundColor Gray
-Write-Host "- Publications: data/publications.json" -ForegroundColor Gray
-Write-Host "- Reviews: data/reviews.json" -ForegroundColor Gray
-Write-Host "- Notifications: data/notifications.json" -ForegroundColor Gray
-Write-Host "- Backups: data/backups/" -ForegroundColor Gray
+Write-Host "🔄 Iniciando servidor..." -ForegroundColor Yellow
 Write-Host ""
-Write-Host "Admin Panel Features:" -ForegroundColor White
-Write-Host "- Dashboard with real-time statistics" -ForegroundColor Gray
-Write-Host "- Backup management (create, restore, delete)" -ForegroundColor Gray
-Write-Host "- System health monitoring" -ForegroundColor Gray
-Write-Host "- Data export and import" -ForegroundColor Gray
-Write-Host "- User management (coming soon)" -ForegroundColor Gray
-Write-Host "- System configuration" -ForegroundColor Gray
-Write-Host ""
-Write-Host "Test credentials:" -ForegroundColor White
-Write-Host "- autor / password" -ForegroundColor Gray
-Write-Host "- revisor / password" -ForegroundColor Gray
-Write-Host "- editor / password" -ForegroundColor Gray
-Write-Host "- admin / password" -ForegroundColor Gray
-Write-Host "- lector / password" -ForegroundColor Gray
-Write-Host ""
-Write-Host "Admin Features:" -ForegroundColor White
-Write-Host "- User management" -ForegroundColor Gray
-Write-Host "- Manual backup creation" -ForegroundColor Gray
-Write-Host "- Backup restoration and deletion" -ForegroundColor Gray
-Write-Host "- Backup history viewing" -ForegroundColor Gray
-Write-Host "- System statistics" -ForegroundColor Gray
-Write-Host "- Data export/import" -ForegroundColor Gray
-Write-Host "- System health monitoring" -ForegroundColor Gray
-Write-Host ""
-Write-Host "API Endpoints Added:" -ForegroundColor White
-Write-Host "- POST /api/admin/backup (create backup)" -ForegroundColor Gray
-Write-Host "- GET /api/admin/backups (list backups)" -ForegroundColor Gray
-Write-Host "- POST /api/admin/backup/restore/:name (restore backup)" -ForegroundColor Gray
-Write-Host "- DELETE /api/admin/backup/:name (delete backup)" -ForegroundColor Gray
-Write-Host "- POST /api/admin/export (export data)" -ForegroundColor Gray
-Write-Host "- POST /api/admin/import (import data)" -ForegroundColor Gray
-Write-Host "- GET /api/admin/stats (system statistics)" -ForegroundColor Gray
-Write-Host "- POST /api/admin/backup/clean (clean old backups)" -ForegroundColor Gray
-Write-Host ""
-Read-Host "Press Enter to continue..."
+
+# Iniciar el servidor de desarrollo
+npm run dev

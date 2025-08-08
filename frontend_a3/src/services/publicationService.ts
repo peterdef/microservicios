@@ -1,595 +1,323 @@
-import { Publication, PublicationType, Chapter } from '../types/publication';
+import { Publication, CreatePublicationRequest, UpdatePublicationRequest } from '../types/publication';
+import { mockDataService } from './mockDataService';
+import { adminService } from './adminService';
+import { notificationService } from './notificationService';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 // Helper function to get auth token
 const getAuthToken = () => localStorage.getItem('auth_token');
 
-export const publicationService = {
-  // Obtener todas las publicaciones con filtros
-  async getPublications(params: {
-    page?: number;
-    size?: number;
-    estado?: string;
-    tipo?: string;
-    titulo?: string;
-  } = {}) {
-    const searchParams = new URLSearchParams();
-    if (params.page !== undefined) searchParams.append('page', params.page.toString());
-    if (params.size !== undefined) searchParams.append('size', params.size.toString());
-    if (params.estado) searchParams.append('estado', params.estado);
-    if (params.tipo) searchParams.append('tipo', params.tipo);
-    if (params.titulo) searchParams.append('titulo', params.titulo);
+class PublicationService {
+  async getPublications(): Promise<any[]> {
+    try {
+      console.log('Getting publications from mock service...');
+      const publications = mockDataService.getPublications();
+      console.log('Available publications:', publications.length);
+      return publications;
+    } catch (error) {
+      console.error('Error getting publications:', error);
+      throw new Error('Error al obtener publicaciones');
+    }
+  }
 
-    const response = await fetch(`${API_BASE_URL}/publicaciones?${searchParams}`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('text/html')) {
-        throw new Error('Servidor no disponible. Verifique que el servidor mock esté corriendo en el puerto 8080.');
+  async getPublication(id: number): Promise<any> {
+    try {
+      const publications = mockDataService.getPublications();
+      const publication = publications.find((p: any) => p.id === id);
+      
+      if (!publication) {
+        throw new Error('Publicación no encontrada');
       }
-      try {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al obtener publicaciones');
-      } catch (parseError) {
-        throw new Error(`Error al obtener publicaciones: ${response.status} ${response.statusText}`);
-      }
-    }
-
-    return response.json();
-  },
-
-  // Obtener mis publicaciones
-  async getMyPublications() {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/mis-publicaciones`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener mis publicaciones');
-    }
-
-    return response.json();
-  },
-
-  // Crear nueva publicación
-  async createPublication(publication: Partial<Publication>) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(publication),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error al crear publicación');
-    }
-
-    return response.json();
-  },
-
-  // Actualizar publicación
-  async updatePublication(id: number, publication: Partial<Publication>) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(publication),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error al actualizar publicación');
-    }
-
-    return response.json();
-  },
-
-  // Eliminar publicación
-  async deletePublication(id: number) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error al eliminar publicación');
-    }
-
-    return response.json();
-  },
-
-  // Obtener publicación por ID
-  async getPublicationById(id: number) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
+      
+      return publication;
+    } catch (error) {
+      console.error('Error getting publication:', error);
       throw new Error('Error al obtener publicación');
     }
+  }
 
-    return response.json();
-  },
-
-  // Subir archivo de publicación
-  async uploadPublicationFile(id: number, file: File) {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/upload`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al subir archivo');
+  async createPublication(publicationData: CreatePublicationRequest): Promise<any> {
+    try {
+      // Obtener usuario actual
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      
+      // Crear nueva publicación usando el servicio mock
+      const newPublication = mockDataService.addPublication({
+        ...publicationData,
+        autor: {
+          id: user.id,
+          nombres: user.nombres,
+          apellidos: user.apellidos,
+          email: user.email
+        },
+        estado: 'PENDIENTE_REVISION' // Estado inicial para revisión
+      });
+      
+      console.log('Publication created and saved to mock service');
+      
+      // Automáticamente asignar la publicación a revisores disponibles
+      await this.autoAssignToReviewers(newPublication);
+      
+      return newPublication;
+    } catch (error) {
+      console.error('Error creating publication:', error);
+      throw new Error('Error al crear publicación');
     }
+  }
 
-    return response.json();
-  },
+  // Método para asignar automáticamente a revisores
+  async autoAssignToReviewers(publication: any): Promise<void> {
+    try {
+      // Obtener revisores disponibles
+      const availableReviewers = await adminService.getAvailableReviewers();
+      
+      if (availableReviewers.length === 0) {
+        console.log('No hay revisores disponibles para asignar');
+        // Crear notificación para el administrador
+        await notificationService.createRoleBasedNotification(
+          'REVIEWER_SHORTAGE' as any,
+          'SYSTEM' as any,
+          'Falta de Revisores',
+          `No hay revisores disponibles para la publicación "${publication.titulo}". Se requiere asignación manual.`,
+          'admin@test.com',
+          'HIGH' as any,
+          {
+            publicationId: publication.id,
+            publicationTitle: publication.titulo
+          }
+        );
+        return;
+      }
 
-  // Cambiar estado de publicación
-  async changePublicationStatus(id: number, status: string) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/status`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ status }),
-    });
+      // Algoritmo inteligente de asignación basado en:
+      // 1. Carga de trabajo actual del revisor
+      // 2. Especialidad/experiencia en la categoría
+      // 3. Historial de calidad de revisiones
+      const selectedReviewer = this.selectBestReviewer(availableReviewers, publication);
+      
+      // Asignar la revisión
+      const reviewAssignment = await adminService.assignReview(publication.id, selectedReviewer.id);
+      
+      // Crear notificación para el revisor asignado
+      await notificationService.createRoleBasedNotification(
+        'REVIEW_ASSIGNED' as any,
+        'REVIEW' as any,
+        'Nueva Revisión Asignada',
+        `Se te ha asignado la revisión de "${publication.titulo}". Fecha límite: ${this.calculateDeadline()}`,
+        selectedReviewer.email,
+        'MEDIUM' as any,
+        {
+          reviewId: reviewAssignment.id,
+          publicationId: publication.id,
+          publicationTitle: publication.titulo,
+          deadline: this.calculateDeadline()
+        }
+      );
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error al cambiar estado');
+      // Crear notificación para el autor
+      if (publication.autor && publication.autor.email) {
+        await notificationService.createRoleBasedNotification(
+          'PUBLICATION_SUBMITTED' as any,
+          'PUBLICATION' as any,
+          'Publicación Enviada para Revisión',
+          `Tu publicación "${publication.titulo}" ha sido enviada para revisión. Recibirás notificaciones sobre el progreso.`,
+          publication.autor.email,
+          'LOW' as any,
+          {
+            publicationId: publication.id,
+            publicationTitle: publication.titulo
+          }
+        );
+      }
+      
+      console.log(`Publicación ${publication.titulo} asignada automáticamente a ${selectedReviewer.nombres} ${selectedReviewer.apellidos}`);
+    } catch (error) {
+      console.error('Error auto-assigning to reviewers:', error);
+      // No lanzar error para no interrumpir la creación de la publicación
     }
+  }
 
-    return response.json();
-  },
-
-  // Obtener estadísticas de publicaciones
-  async getPublicationStats() {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/stats`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
+  // Método para seleccionar el mejor revisor disponible
+  private selectBestReviewer(reviewers: any[], publication: any): any {
+    // Calcular puntuación para cada revisor
+    const reviewersWithScore = reviewers.map(reviewer => {
+      let score = 0;
+      
+      // Factor 1: Carga de trabajo (menos carga = mayor puntuación)
+      const currentWorkload = this.calculateReviewerWorkload(reviewer);
+      score += Math.max(0, 10 - currentWorkload);
+      
+      // Factor 2: Experiencia en la categoría
+      if (publication.categoria && reviewer.especialidades) {
+        const categoryMatch = reviewer.especialidades.some((esp: string) => 
+          esp.toLowerCase().includes(publication.categoria.toLowerCase())
+        );
+        score += categoryMatch ? 5 : 0;
+      }
+      
+      // Factor 3: Calificación promedio del revisor
+      score += (reviewer.calificacion || 5) * 2;
+      
+      // Factor 4: Tiempo promedio de revisión (menor tiempo = mayor puntuación)
+      const avgTime = reviewer.tiempoPromedio || 7;
+      score += Math.max(0, 10 - avgTime);
+      
+      return { ...reviewer, score };
     });
+    
+    // Ordenar por puntuación y seleccionar el mejor
+    reviewersWithScore.sort((a, b) => b.score - a.score);
+    return reviewersWithScore[0];
+  }
 
-    if (!response.ok) {
-      throw new Error('Error al obtener estadísticas');
+  // Método para calcular la carga de trabajo de un revisor
+  private calculateReviewerWorkload(reviewer: any): number {
+    // En un sistema real, esto consultaría la base de datos
+    // Por ahora, simulamos basándonos en revisiones activas
+    const activeReviews = mockDataService.getReviews().filter((r: any) => 
+      r.revisor && r.revisor.email === reviewer.email && 
+      ['ASIGNADA', 'EN_PROGRESO'].includes(r.estado)
+    );
+    
+    return activeReviews.length;
+  }
+
+  // Método para calcular fecha límite de revisión
+  private calculateDeadline(): string {
+    const deadline = new Date();
+    deadline.setDate(deadline.getDate() + 14); // 14 días por defecto
+    return deadline.toISOString();
+  }
+
+  async updatePublication(id: number, publicationData: UpdatePublicationRequest): Promise<any> {
+    try {
+      const updatedPublication = mockDataService.updatePublication(id, publicationData);
+      
+      if (!updatedPublication) {
+        throw new Error('Publicación no encontrada');
+      }
+      
+      return updatedPublication;
+    } catch (error) {
+      console.error('Error updating publication:', error);
+      throw new Error('Error al actualizar publicación');
     }
+  }
 
-    return response.json();
-  },
+  async deletePublication(id: number): Promise<void> {
+    try {
+      mockDataService.deletePublication(id);
+      console.log('Publication deleted from mock service');
+    } catch (error) {
+      console.error('Error deleting publication:', error);
+      throw new Error('Error al eliminar publicación');
+    }
+  }
 
-  // Buscar publicaciones
-  async searchPublications(query: string) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/search?q=${encodeURIComponent(query)}`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
+  async getMyPublications(): Promise<any[]> {
+    try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      const myPublications = mockDataService.getMyPublications(user.email);
+      
+      console.log('My publications:', myPublications.length);
+      return myPublications;
+    } catch (error) {
+      console.error('Error getting my publications:', error);
+      throw new Error('Error al obtener mis publicaciones');
+    }
+  }
 
-    if (!response.ok) {
+  async searchPublications(query: string): Promise<any[]> {
+    try {
+      const filteredPublications = mockDataService.searchPublications(query);
+      return filteredPublications;
+    } catch (error) {
+      console.error('Error searching publications:', error);
       throw new Error('Error al buscar publicaciones');
     }
+  }
 
-    return response.json();
-  },
-
-  // Obtener publicaciones por categoría
-  async getPublicationsByCategory(category: string) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/category/${category}`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
+  async getPublicationsByCategory(category: string): Promise<any[]> {
+    try {
+      const filteredPublications = mockDataService.getPublicationsByCategory(category);
+      return filteredPublications;
+    } catch (error) {
+      console.error('Error getting publications by category:', error);
       throw new Error('Error al obtener publicaciones por categoría');
     }
-
-    return response.json();
-  },
-
-  // Obtener publicaciones populares
-  async getPopularPublications() {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/popular`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener publicaciones populares');
-    }
-
-    return response.json();
-  },
-
-  // Obtener publicaciones recientes
-  async getRecentPublications() {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/recent`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener publicaciones recientes');
-    }
-
-    return response.json();
-  },
-
-  // Marcar publicación como favorita
-  async toggleFavorite(id: number) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/favorite`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al marcar como favorita');
-    }
-
-    return response.json();
-  },
-
-  // Obtener publicaciones favoritas
-  async getFavoritePublications() {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/favorites`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener publicaciones favoritas');
-    }
-
-    return response.json();
-  },
-
-  // Compartir publicación
-  async sharePublication(id: number, shareData: { email?: string; message?: string }) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/share`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(shareData),
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al compartir publicación');
-    }
-
-    return response.json();
-  },
-
-  // Descargar publicación
-  async downloadPublication(id: number) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/download`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al descargar publicación');
-    }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `publication-${id}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-  },
-
-  // Obtener metadatos de publicación
-  async getPublicationMetadata(id: number) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/metadata`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener metadatos');
-    }
-
-    return response.json();
-  },
-
-  // Actualizar metadatos de publicación
-  async updatePublicationMetadata(id: number, metadata: any) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/metadata`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(metadata),
-    });
-      
-      if (!response.ok) {
-      throw new Error('Error al actualizar metadatos');
-    }
-
-    return response.json();
-  },
-
-  // Obtener versiones de publicación
-  async getPublicationVersions(id: number) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/versions`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener versiones');
-    }
-
-    return response.json();
-  },
-
-  // Crear nueva versión de publicación
-  async createPublicationVersion(id: number, versionData: any) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/versions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(versionData),
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al crear nueva versión');
-    }
-
-    return response.json();
-  },
-
-  // Obtener comentarios de publicación
-  async getPublicationComments(id: number) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/comments`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener comentarios');
-    }
-
-    return response.json();
-  },
-
-  // Agregar comentario a publicación
-  async addPublicationComment(id: number, comment: { content: string; parentId?: number }) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/comments`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(comment),
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al agregar comentario');
-    }
-
-    return response.json();
-  },
-
-  // Eliminar comentario
-  async deletePublicationComment(publicationId: number, commentId: number) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${publicationId}/comments/${commentId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al eliminar comentario');
-    }
-
-    return response.json();
-  },
-
-  // Obtener citas de publicación
-  async getPublicationCitations(id: number) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/citations`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener citas');
-    }
-
-    return response.json();
-  },
-
-  // Agregar cita a publicación
-  async addPublicationCitation(id: number, citation: { doi: string; title: string; authors: string[] }) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/citations`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(citation),
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al agregar cita');
-    }
-
-    return response.json();
-  },
-
-  // Obtener publicaciones relacionadas
-  async getRelatedPublications(id: number) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/${id}/related`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener publicaciones relacionadas');
-    }
-
-    return response.json();
-  },
-
-  // Exportar publicaciones
-  async exportPublications(format: 'pdf' | 'csv' | 'json', filters?: any) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/export`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ format, filters }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al exportar publicaciones');
-    }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `publications.${format}`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-  },
-
-  // Importar publicaciones
-  async importPublications(file: File) {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_BASE_URL}/publicaciones/import`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al importar publicaciones');
-    }
-
-    return response.json();
-  },
-
-  // Validar publicación
-  async validatePublication(publication: Partial<Publication>) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/validate`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(publication),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error de validación');
-    }
-
-    return response.json();
-  },
-
-  // Obtener plantillas de publicación
-  async getPublicationTemplates() {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/templates`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener plantillas');
-    }
-
-    return response.json();
-  },
-
-  // Crear publicación desde plantilla
-  async createFromTemplate(templateId: string, data: any) {
-    const response = await fetch(`${API_BASE_URL}/publicaciones/template/${templateId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al crear desde plantilla');
-    }
-
-    return response.json();
   }
-};
+
+  async getPublicationsByStatus(status: string): Promise<any[]> {
+    try {
+      const filteredPublications = mockDataService.getPublicationsByStatus(status);
+      return filteredPublications;
+    } catch (error) {
+      console.error('Error getting publications by status:', error);
+      throw new Error('Error al obtener publicaciones por estado');
+    }
+  }
+
+  // Método para obtener estadísticas de publicaciones
+  async getPublicationStats(): Promise<any> {
+    try {
+      const stats = mockDataService.getPublicationStats();
+      return stats;
+    } catch (error) {
+      console.error('Error getting publication stats:', error);
+      throw new Error('Error al obtener estadísticas de publicaciones');
+    }
+  }
+
+  // Método para simular flujo de trabajo de publicación
+  async simulatePublicationWorkflow(publicationId: number): Promise<void> {
+    try {
+      mockDataService.simulatePublicationWorkflow(publicationId);
+    } catch (error) {
+      console.error('Error simulating publication workflow:', error);
+      throw new Error('Error al simular flujo de trabajo');
+    }
+  }
+
+  // Método para obtener categorías
+  async getCategories(): Promise<any[]> {
+    try {
+      return mockDataService.getCategories();
+    } catch (error) {
+      console.error('Error getting categories:', error);
+      throw new Error('Error al obtener categorías');
+    }
+  }
+
+  // Método para obtener tags
+  async getTags(): Promise<string[]> {
+    try {
+      return mockDataService.getTags();
+    } catch (error) {
+      console.error('Error getting tags:', error);
+      throw new Error('Error al obtener tags');
+    }
+  }
+
+  // Método para limpiar datos mock
+  async clearMockData(): Promise<void> {
+    mockDataService.clearAllData();
+  }
+
+  // Método para resetear a datos por defecto
+  async resetToDefaults(): Promise<void> {
+    mockDataService.resetToDefaults();
+  }
+
+  // Método para exportar datos
+  async exportData(): Promise<any> {
+    return mockDataService.exportData();
+  }
+
+  // Método para importar datos
+  async importData(data: any): Promise<void> {
+    mockDataService.importData(data);
+  }
+}
+
+export const publicationService = new PublicationService();

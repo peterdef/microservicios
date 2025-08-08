@@ -28,7 +28,7 @@ import Link from 'next/link';
 
 export default function CatalogPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
-  const [publications, setPublications] = useState<Publication[]>([]);
+  const [publications, setPublications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,13 +48,11 @@ export default function CatalogPage() {
       setError(null);
       
       // Fetch all publications from backup (not just published ones for now)
-      const response = await publicationService.getPublications({
-        size: 100 // Get more publications for the catalog
-      });
+      const response = await publicationService.getPublications();
       
       console.log('API Response:', response); // Debug log
       
-      const fetchedPublications = response.content || response;
+      const fetchedPublications = response;
       console.log('Fetched Publications:', fetchedPublications); // Debug log
       
       setPublications(fetchedPublications);
@@ -62,13 +60,8 @@ export default function CatalogPage() {
     } catch (error: any) {
       console.error('Error fetching publications:', error);
       
-      // Check if it's a server connectivity issue
-      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-        setError('Servidor no disponible. Verifique que el servidor mock esté corriendo en el puerto 8080.');
-      } else if (error.message.includes('401')) {
+      if (error.message.includes('401')) {
         setError('Error de autenticación. Por favor, inicie sesión nuevamente.');
-      } else if (error.message.includes('404')) {
-        setError('Servidor mock no disponible. Ejecute "node mock-server.js" en una nueva terminal.');
       } else {
         setError(error.message || 'Error al cargar las publicaciones');
       }
@@ -204,18 +197,7 @@ export default function CatalogPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Error al cargar el catálogo</h3>
             <p className="text-gray-500 mb-4">{error}</p>
             
-            {error.includes('servidor') && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-yellow-800 font-medium mb-2">Para solucionar este problema:</p>
-                <ol className="text-sm text-yellow-700 space-y-1">
-                  <li>1. Abra una nueva terminal</li>
-                  <li>2. Navegue al directorio del proyecto</li>
-                  <li>3. Ejecute: <code className="bg-yellow-100 px-1 rounded">node mock-server.js</code></li>
-                  <li>4. Espere el mensaje "Mock server running on http://localhost:8080"</li>
-                  <li>5. Recargue esta página</li>
-                </ol>
-              </div>
-            )}
+
             
             <button
               onClick={fetchPublications}
@@ -429,7 +411,7 @@ export default function CatalogPage() {
                     <div className="flex items-center space-x-4 text-xs text-gray-500 mb-4">
                       <div className="flex items-center space-x-1">
                         <User className="h-3 w-3" />
-                        <span>{publication.autor || 'Autor'}</span>
+                        <span>{publication.autor?.nombres} {publication.autor?.apellidos || 'Autor'}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-3 w-3" />
@@ -439,7 +421,7 @@ export default function CatalogPage() {
 
                     {publication.palabrasClave && publication.palabrasClave.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-4">
-                        {publication.palabrasClave.slice(0, 3).map((keyword, index) => (
+                        {publication.palabrasClave.slice(0, 3).map((keyword: string, index: number) => (
                           <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             <Tag className="h-3 w-3 mr-1" />
                             {keyword}

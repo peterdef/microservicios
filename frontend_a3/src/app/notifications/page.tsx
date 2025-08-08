@@ -20,20 +20,41 @@ import {
   MessageSquare,
   Calendar,
   Tag,
-  Settings
+  Settings,
+  FileText,
+  UserPlus,
+  Database,
+  Shield,
+  BookOpen,
+  User,
+  Activity,
+  Zap,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import Link from 'next/link';
+import { NotificationType, NotificationCategory, NotificationPriority } from '../../types/notification';
 
 interface Notification {
   id: number;
   titulo: string;
   mensaje: string;
   tipo: string;
+  categoria: string;
   fecha: string;
   leida: boolean;
-  prioridad: 'ALTA' | 'MEDIA' | 'BAJA';
-  categoria?: string;
+  prioridad: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  urgente: boolean;
   accion?: string;
+  urlAccion?: string;
+  icono?: string;
+  color?: string;
+  metadata?: Record<string, any>;
+  relacionadoCon?: {
+    tipo: 'publication' | 'review' | 'user' | 'system';
+    id: string;
+    titulo?: string;
+  };
 }
 
 export default function NotificationsPage() {
@@ -44,6 +65,7 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
 
   // Fetch notifications from API
@@ -92,11 +114,13 @@ export default function NotificationsPage() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'ALTA':
+      case 'URGENT':
         return 'bg-red-100 text-red-800';
-      case 'MEDIA':
+      case 'HIGH':
+        return 'bg-orange-100 text-orange-800';
+      case 'MEDIUM':
         return 'bg-yellow-100 text-yellow-800';
-      case 'BAJA':
+      case 'LOW':
         return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -105,11 +129,13 @@ export default function NotificationsPage() {
 
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
-      case 'ALTA':
+      case 'URGENT':
+        return <AlertTriangle className="h-4 w-4" />;
+      case 'HIGH':
         return <AlertCircle className="h-4 w-4" />;
-      case 'MEDIA':
+      case 'MEDIUM':
         return <Clock className="h-4 w-4" />;
-      case 'BAJA':
+      case 'LOW':
         return <CheckCircle className="h-4 w-4" />;
       default:
         return <Bell className="h-4 w-4" />;
@@ -118,23 +144,76 @@ export default function NotificationsPage() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'REVISION_ASIGNADA':
-      case 'RECORDATORIO':
+      case 'REVIEW_ASSIGNED':
+      case 'REVIEW_COMPLETED':
+      case 'REVIEW_OVERDUE':
+      case 'REVIEW_REMINDER':
         return <Eye className="h-4 w-4" />;
-      case 'PUBLICACION_APROBADA':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'CAMBIOS_SOLICITADOS':
-        return <AlertCircle className="h-4 w-4" />;
-      case 'CITACION':
+      case 'PUBLICATION_SUBMITTED':
+      case 'PUBLICATION_APPROVED':
+      case 'PUBLICATION_PUBLISHED':
+      case 'PUBLICATION_REJECTED':
+      case 'PUBLICATION_CHANGES_REQUESTED':
+        return <FileText className="h-4 w-4" />;
+      case 'USER_REGISTERED':
+      case 'USER_ROLE_CHANGED':
+      case 'USER_ACCOUNT_LOCKED':
+      case 'USER_ACCOUNT_UNLOCKED':
+        return <UserPlus className="h-4 w-4" />;
+      case 'SYSTEM_ALERT':
+      case 'SYSTEM_MAINTENANCE':
+      case 'SECURITY_ALERT':
+      case 'PERFORMANCE_ALERT':
+        return <Shield className="h-4 w-4" />;
+      case 'BACKUP_CREATED':
+      case 'BACKUP_RESTORED':
+      case 'BACKUP_FAILED':
+        return <Database className="h-4 w-4" />;
+      case 'CITATION_RECEIVED':
         return <Star className="h-4 w-4" />;
-      case 'COMENTARIO':
+      case 'COMMENT_RECEIVED':
         return <MessageSquare className="h-4 w-4" />;
-      case 'SISTEMA':
-        return <Bell className="h-4 w-4" />;
-      case 'NUEVA_PUBLICACION':
+      case 'NEW_PUBLICATION_AVAILABLE':
+        return <BookOpen className="h-4 w-4" />;
+      case 'PASSWORD_CHANGED':
+      case 'PROFILE_UPDATED':
+      case 'SETTINGS_CHANGED':
+        return <Settings className="h-4 w-4" />;
+      case 'EXPORT_COMPLETED':
+      case 'IMPORT_COMPLETED':
+        return <Activity className="h-4 w-4" />;
+      case 'EMAIL_SENT':
+      case 'EMAIL_FAILED':
         return <Mail className="h-4 w-4" />;
       default:
         return <Bell className="h-4 w-4" />;
+    }
+  };
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'PUBLICATION':
+        return 'bg-blue-100 text-blue-800';
+      case 'REVIEW':
+        return 'bg-amber-100 text-amber-800';
+      case 'SYSTEM':
+        return 'bg-gray-100 text-gray-800';
+      case 'USER':
+        return 'bg-purple-100 text-purple-800';
+      case 'ADMIN':
+        return 'bg-red-100 text-red-800';
+      case 'EDITORIAL':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'SECURITY':
+        return 'bg-red-100 text-red-800';
+      case 'PERFORMANCE':
+        return 'bg-orange-100 text-orange-800';
+      case 'BACKUP':
+        return 'bg-green-100 text-green-800';
+      case 'EMAIL':
+        return 'bg-cyan-100 text-cyan-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -167,6 +246,16 @@ export default function NotificationsPage() {
             setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
           }
           break;
+        case 'iniciar_revision':
+          await notificationService.iniciarRevision(notificationId);
+          // Refresh notifications after starting review
+          await fetchNotifications();
+          alert('Revisión iniciada exitosamente');
+          break;
+        case 'completar_revision':
+          // Show review completion form
+          handleCompletarRevision(notificationId);
+          break;
         case 'action':
           // Handle specific notification action
           console.log('Executing notification action:', notificationId);
@@ -178,18 +267,57 @@ export default function NotificationsPage() {
     }
   };
 
+  const handleCompletarRevision = async (notificationId: number) => {
+    const calificacion = prompt('Ingresa la calificación (1-10):');
+    if (!calificacion) return;
+    
+    const calificacionNum = parseInt(calificacion);
+    if (isNaN(calificacionNum) || calificacionNum < 1 || calificacionNum > 10) {
+      alert('La calificación debe ser un número entre 1 y 10');
+      return;
+    }
+
+    const recomendacion = prompt('Ingresa la recomendación (ACEPTAR/RECHAZAR/CAMBIOS_MINOR/CAMBIOS_MAJOR):');
+    if (!recomendacion || !['ACEPTAR', 'RECHAZAR', 'CAMBIOS_MINOR', 'CAMBIOS_MAJOR'].includes(recomendacion)) {
+      alert('La recomendación debe ser: ACEPTAR, RECHAZAR, CAMBIOS_MINOR o CAMBIOS_MAJOR');
+      return;
+    }
+
+    const comentarios = prompt('Ingresa los comentarios de la revisión:');
+    if (!comentarios) {
+      alert('Debes ingresar comentarios');
+      return;
+    }
+
+    try {
+      await notificationService.completarRevision(notificationId, {
+        calificacion: calificacionNum,
+        recomendacion: recomendacion as 'ACEPTAR' | 'RECHAZAR' | 'CAMBIOS_MINOR' | 'CAMBIOS_MAJOR',
+        comentarios: comentarios
+      });
+      
+      // Refresh notifications after completing review
+      await fetchNotifications();
+      alert('Revisión completada exitosamente');
+    } catch (error: any) {
+      console.error('Error completing review:', error);
+      alert(error.message || 'Error al completar la revisión');
+    }
+  };
+
   const filteredNotifications = notifications.filter(notification => {
     const matchesFilter = filter === 'all' || 
                          (filter === 'unread' && !notification.leida) ||
                          (filter === 'read' && notification.leida);
     const matchesPriority = !priorityFilter || notification.prioridad === priorityFilter;
     const matchesType = !typeFilter || notification.tipo === typeFilter;
+    const matchesCategory = !categoryFilter || notification.categoria === categoryFilter;
     
-    return matchesFilter && matchesPriority && matchesType;
+    return matchesFilter && matchesPriority && matchesType && matchesCategory;
   });
 
   const unreadCount = notifications.filter(n => !n.leida).length;
-  const highPriorityCount = notifications.filter(n => !n.leida && n.prioridad === 'ALTA').length;
+  const urgentCount = notifications.filter(n => !n.leida && (n.prioridad === 'URGENT' || n.urgente)).length;
 
   const markAllAsRead = async () => {
     try {
@@ -205,6 +333,7 @@ export default function NotificationsPage() {
     setFilter('all');
     setPriorityFilter('');
     setTypeFilter('');
+    setCategoryFilter('');
   };
 
   if (loading) {
@@ -262,10 +391,10 @@ export default function NotificationsPage() {
                 <div className="text-sm text-gray-500">No leídas</div>
                 <div className="text-2xl font-bold text-gray-900">{unreadCount}</div>
               </div>
-              {highPriorityCount > 0 && (
+              {urgentCount > 0 && (
                 <div className="text-right">
-                  <div className="text-sm text-gray-500">Alta prioridad</div>
-                  <div className="text-2xl font-bold text-red-600">{highPriorityCount}</div>
+                  <div className="text-sm text-gray-500">Urgentes</div>
+                  <div className="text-2xl font-bold text-red-600">{urgentCount}</div>
                 </div>
               )}
             </div>
@@ -303,7 +432,7 @@ export default function NotificationsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label htmlFor="filter" className="block text-sm font-medium text-gray-700 mb-1">
                 Estado
@@ -333,9 +462,34 @@ export default function NotificationsPage() {
                     className="block w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   >
                     <option value="">Todas las prioridades</option>
-                    <option value="ALTA">Alta</option>
-                    <option value="MEDIA">Media</option>
-                    <option value="BAJA">Baja</option>
+                    <option value="URGENT">Urgente</option>
+                    <option value="HIGH">Alta</option>
+                    <option value="MEDIUM">Media</option>
+                    <option value="LOW">Baja</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                    Categoría
+                  </label>
+                  <select
+                    id="category"
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="block w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="">Todas las categorías</option>
+                    <option value="PUBLICATION">Publicación</option>
+                    <option value="REVIEW">Revisión</option>
+                    <option value="SYSTEM">Sistema</option>
+                    <option value="USER">Usuario</option>
+                    <option value="ADMIN">Administración</option>
+                    <option value="EDITORIAL">Editorial</option>
+                    <option value="SECURITY">Seguridad</option>
+                    <option value="PERFORMANCE">Rendimiento</option>
+                    <option value="BACKUP">Backup</option>
+                    <option value="EMAIL">Email</option>
                   </select>
                 </div>
 
@@ -350,14 +504,20 @@ export default function NotificationsPage() {
                     className="block w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   >
                     <option value="">Todos los tipos</option>
-                    <option value="REVISION_ASIGNADA">Revisión Asignada</option>
-                    <option value="PUBLICACION_APROBADA">Publicación Aprobada</option>
-                    <option value="CAMBIOS_SOLICITADOS">Cambios Solicitados</option>
-                    <option value="CITACION">Citación</option>
-                    <option value="COMENTARIO">Comentario</option>
-                    <option value="RECORDATORIO">Recordatorio</option>
-                    <option value="SISTEMA">Sistema</option>
-                    <option value="NUEVA_PUBLICACION">Nueva Publicación</option>
+                    <option value="REVIEW_ASSIGNED">Revisión Asignada</option>
+                    <option value="REVIEW_COMPLETED">Revisión Completada</option>
+                    <option value="REVIEW_OVERDUE">Revisión Vencida</option>
+                    <option value="REVIEW_REMINDER">Recordatorio de Revisión</option>
+                    <option value="PUBLICATION_SUBMITTED">Publicación Enviada</option>
+                    <option value="PUBLICATION_APPROVED">Publicación Aprobada</option>
+                    <option value="PUBLICATION_PUBLISHED">Publicación Publicada</option>
+                    <option value="PUBLICATION_REJECTED">Publicación Rechazada</option>
+                    <option value="PUBLICATION_CHANGES_REQUESTED">Cambios Solicitados</option>
+                    <option value="USER_REGISTERED">Usuario Registrado</option>
+                    <option value="SYSTEM_ALERT">Alerta del Sistema</option>
+                    <option value="SECURITY_ALERT">Alerta de Seguridad</option>
+                    <option value="BACKUP_CREATED">Backup Creado</option>
+                    <option value="NEW_PUBLICATION_AVAILABLE">Nueva Publicación</option>
                   </select>
                 </div>
 
@@ -393,7 +553,7 @@ export default function NotificationsPage() {
               <Bell className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-4 text-lg font-medium text-gray-900">No hay notificaciones</h3>
               <p className="mt-2 text-sm text-gray-500">
-                {filter !== 'all' || priorityFilter || typeFilter
+                {filter !== 'all' || priorityFilter || typeFilter || categoryFilter
                   ? 'Intenta ajustar los filtros para ver más notificaciones.'
                   : 'No tienes notificaciones en este momento.'
                 }
@@ -429,12 +589,10 @@ export default function NotificationsPage() {
                             {getPriorityIcon(notification.prioridad)}
                             <span className="ml-1">{notification.prioridad}</span>
                           </span>
-                          {notification.categoria && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                              <Tag className="h-3 w-3 mr-1" />
-                              {notification.categoria}
-                            </span>
-                          )}
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(notification.categoria)}`}>
+                            <Tag className="h-3 w-3 mr-1" />
+                            {notification.categoria}
+                          </span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <button
@@ -482,6 +640,32 @@ export default function NotificationsPage() {
                           >
                             {notification.accion}
                           </button>
+                        )}
+                        
+                        {/* Review action buttons */}
+                        {notification.tipo.includes('REVIEW') && !notification.leida && (
+                          <div className="flex space-x-2">
+                            {notification.tipo === 'REVIEW_ASSIGNED' && (
+                              <button
+                                onClick={() => handleNotificationAction('iniciar_revision', notification.id)}
+                                className="inline-flex items-center px-3 py-1 text-xs font-medium text-green-600 hover:text-green-800 hover:bg-green-50 rounded-md transition-colors"
+                                title="Iniciar revisión"
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                Iniciar Revisión
+                              </button>
+                            )}
+                            {notification.tipo === 'REVIEW_STARTED' && (
+                              <button
+                                onClick={() => handleNotificationAction('completar_revision', notification.id)}
+                                className="inline-flex items-center px-3 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                                title="Completar revisión"
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Completar Revisión
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

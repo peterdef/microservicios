@@ -78,3 +78,31 @@ export interface ReviewSearchParams {
   publicacionId?: string;
   prioridad?: string;
 }
+
+export interface CreateReviewRequest {
+  publicacion: {
+    id: number;
+    titulo: string;
+    autor: {
+      id: number;
+      nombres: string;
+      apellidos: string;
+      email: string;
+    };
+  };
+  revisor: {
+    id: number;
+    nombres: string;
+    apellidos: string;
+    email: string;
+  };
+}
+
+export interface UpdateReviewRequest {
+  estado?: string;
+  comentarios?: string;
+  recomendacion?: string;
+  puntuacion?: number;
+  aspectosEvaluados?: string[];
+  fechaCompletado?: string;
+}

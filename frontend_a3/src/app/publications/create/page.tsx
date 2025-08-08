@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../contexts/AuthContext';
 import { publicationService } from '../../../services/publicationService';
 import { PublicationFormData, PublicationType, Chapter } from '../../../types/publication';
+import { hasPermission, ROLES } from '../../../types/auth';
 import { 
   Save, 
   ArrowLeft, 
@@ -46,7 +47,14 @@ export default function CreatePublicationPage() {
     if (!isLoading && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+    
+    // Verificar permisos de autor
+    if (!isLoading && isAuthenticated && user) {
+      if (!hasPermission(user.roles, 'publications:write')) {
+        router.push('/publications');
+      }
+    }
+  }, [isAuthenticated, isLoading, router, user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -175,6 +183,30 @@ export default function CreatePublicationPage() {
     return null;
   }
 
+  // Verificar permisos de autor
+  if (user && !hasPermission(user.roles, 'publications:write')) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-red-800 mb-2">
+              Acceso Denegado
+            </h2>
+            <p className="text-red-600 mb-4">
+              Solo los autores pueden crear nuevas publicaciones.
+            </p>
+            <Link
+              href="/publications"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+            >
+              Volver a Publicaciones
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -269,7 +301,7 @@ export default function CreatePublicationPage() {
                       required
                       value={formData.titulo}
                       onChange={handleInputChange}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 placeholder-gray-500"
                       placeholder="Ingresa el título de la publicación"
                     />
                   </div>
@@ -285,7 +317,7 @@ export default function CreatePublicationPage() {
                       required
                       value={formData.resumen}
                       onChange={handleInputChange}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 placeholder-gray-500"
                       placeholder="Describe brevemente el contenido de la publicación"
                     />
                   </div>
@@ -300,7 +332,7 @@ export default function CreatePublicationPage() {
                       id="categoria"
                       value={formData.categoria}
                       onChange={handleInputChange}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 placeholder-gray-500"
                       placeholder="Ej: Ciencias de la Computación, Matemáticas, etc."
                     />
                   </div>
@@ -314,7 +346,7 @@ export default function CreatePublicationPage() {
                       id="licencia"
                       value={formData.licencia}
                       onChange={handleInputChange}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900"
                     >
                       <option value="">Selecciona una licencia</option>
                       <option value="CC-BY">Creative Commons Attribution (CC-BY)</option>
@@ -342,7 +374,7 @@ export default function CreatePublicationPage() {
                       value={keywordInput}
                       onChange={(e) => setKeywordInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
-                      className="flex-1 border-gray-300 rounded-l-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="flex-1 border-gray-300 rounded-l-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 placeholder-gray-500"
                       placeholder="Agregar palabra clave"
                     />
                     <button
@@ -394,7 +426,7 @@ export default function CreatePublicationPage() {
                         id="revistaObjetivo"
                         value={formData.revistaObjetivo}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 placeholder-gray-500"
                         placeholder="Nombre de la revista"
                       />
                     </div>
@@ -409,7 +441,7 @@ export default function CreatePublicationPage() {
                         id="seccion"
                         value={formData.seccion}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 placeholder-gray-500"
                         placeholder="Sección de la revista"
                       />
                     </div>
@@ -425,7 +457,7 @@ export default function CreatePublicationPage() {
                         min="0"
                         value={formData.figuras}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900"
                       />
                     </div>
                   </div>
@@ -440,7 +472,7 @@ export default function CreatePublicationPage() {
                           value={referenceInput}
                           onChange={(e) => setReferenceInput(e.target.value)}
                           onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addReference())}
-                          className="flex-1 border-gray-300 rounded-l-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          className="flex-1 border-gray-300 rounded-l-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 placeholder-gray-500"
                           placeholder="Agregar referencia bibliográfica"
                         />
                         <button
@@ -491,7 +523,7 @@ export default function CreatePublicationPage() {
                         id="isbn"
                         value={formData.isbn}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 placeholder-gray-500"
                         placeholder="ISBN del libro"
                       />
                     </div>
@@ -507,7 +539,7 @@ export default function CreatePublicationPage() {
                         min="0"
                         value={formData.numeroPaginas}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900"
                       />
                     </div>
 
@@ -521,7 +553,7 @@ export default function CreatePublicationPage() {
                         id="edicion"
                         value={formData.edicion}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 placeholder-gray-500"
                         placeholder="1ra, 2da, etc."
                       />
                     </div>
@@ -565,7 +597,7 @@ export default function CreatePublicationPage() {
                                   type="text"
                                   value={chapter.titulo}
                                   onChange={(e) => updateChapter(index, 'titulo', e.target.value)}
-                                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 placeholder-gray-500"
                                   placeholder="Título del capítulo"
                                 />
                               </div>
@@ -577,7 +609,7 @@ export default function CreatePublicationPage() {
                                   value={chapter.resumenCapitulo}
                                   onChange={(e) => updateChapter(index, 'resumenCapitulo', e.target.value)}
                                   rows={3}
-                                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 placeholder-gray-500"
                                   placeholder="Resumen del contenido del capítulo"
                                 />
                               </div>

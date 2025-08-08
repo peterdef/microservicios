@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../contexts/AuthContext';
-import { RegisterFormData } from '../../types/auth';
-import { Eye, EyeOff, Loader2, BookOpen, User, Mail, Lock, Building } from 'lucide-react';
+import { RegisterFormData, ROLES, ACTOR_DESCRIPTIONS } from '../../types/auth';
+import { Eye, EyeOff, Loader2, BookOpen, User, Mail, Lock, Shield } from 'lucide-react';
 
 export default function RegisterPage() {
   const { register, isAuthenticated, isLoading } = useAuth();
@@ -21,9 +21,7 @@ export default function RegisterPage() {
     nombres: '',
     apellidos: '',
     email: '',
-    afiliacion: '',
-    orcid: '',
-    biografia: '',
+    roles: [ROLES.LECTOR], // Default role
   });
 
   useEffect(() => {
@@ -32,13 +30,22 @@ export default function RegisterPage() {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value,
     }));
     setError(''); // Clear error when user starts typing
+  };
+
+  const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedRole = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      roles: [selectedRole],
+    }));
+    setError('');
   };
 
   const validateForm = (): boolean => {
@@ -54,6 +61,11 @@ export default function RegisterPage() {
 
     if (!formData.email.includes('@')) {
       setError('Ingresa un email válido');
+      return false;
+    }
+
+    if (!formData.roles || formData.roles.length === 0) {
+      setError('Debes seleccionar al menos un rol');
       return false;
     }
 
@@ -193,6 +205,34 @@ export default function RegisterPage() {
               />
             </div>
 
+            {/* Role Selection */}
+            <div>
+              <label htmlFor="roles" className="block text-sm font-medium text-gray-700">
+                Rol
+              </label>
+              <div className="mt-1 relative">
+                <select
+                  id="roles"
+                  name="roles"
+                  required
+                  value={formData.roles[0] || ''}
+                  onChange={handleRoleChange}
+                  className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm pl-10"
+                >
+                  <option value="">Selecciona un rol</option>
+                  {Object.entries(ACTOR_DESCRIPTIONS).map(([role, info]) => (
+                    <option key={role} value={role}>
+                      {info.name} - {info.description}
+                    </option>
+                  ))}
+                </select>
+                <Shield className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Selecciona el rol que mejor describe tu función en la plataforma
+              </p>
+            </div>
+
             {/* Passwords */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
@@ -256,55 +296,6 @@ export default function RegisterPage() {
                   </button>
                 </div>
               </div>
-            </div>
-
-            {/* Optional Fields */}
-            <div>
-              <label htmlFor="afiliacion" className="block text-sm font-medium text-gray-700">
-                Afiliación (Opcional)
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="afiliacion"
-                  name="afiliacion"
-                  type="text"
-                  value={formData.afiliacion}
-                  onChange={handleInputChange}
-                  className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm pl-10"
-                  placeholder="Universidad, institución, etc."
-                />
-                <Building className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="orcid" className="block text-sm font-medium text-gray-700">
-                ORCID (Opcional)
-              </label>
-              <input
-                id="orcid"
-                name="orcid"
-                type="text"
-                value={formData.orcid}
-                onChange={handleInputChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="0000-0000-0000-0000"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="biografia" className="block text-sm font-medium text-gray-700">
-                Biografía (Opcional)
-              </label>
-              <textarea
-                id="biografia"
-                name="biografia"
-                rows={3}
-                value={formData.biografia}
-                onChange={handleInputChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Breve descripción de tu perfil académico..."
-              />
             </div>
           </div>
 

@@ -8,131 +8,72 @@ import {
   Bell, 
   Mail, 
   Smartphone, 
-  Globe, 
-  Shield, 
-  Clock, 
+  Monitor, 
+  Settings, 
   Save,
-  AlertCircle,
-  CheckCircle,
-  X,
-  Settings,
-  User,
-  Calendar,
-  Tag,
+  Clock,
+  Globe, 
+  Languages,
   Volume2,
   VolumeX,
+  Calendar,
+  Shield,
+  Database,
+  Activity,
+  FileText,
   Eye,
-  EyeOff
+  User,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  Tag
 } from 'lucide-react';
+import { NotificationType, NotificationCategory, NotificationPriority, ROLE_NOTIFICATION_TYPES } from '../../../types/notification';
+import { ROLES } from '../../../types/auth';
 
 interface NotificationSettings {
-  email: {
-    enabled: boolean;
-    frequency: 'immediate' | 'daily' | 'weekly';
-    types: string[];
-  };
-  push: {
-    enabled: boolean;
-    types: string[];
-  };
-  inApp: {
-    enabled: boolean;
-    sound: boolean;
-    types: string[];
-  };
-  privacy: {
-    showReadStatus: boolean;
-    allowAnalytics: boolean;
-  };
-  schedule: {
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  inAppNotifications: boolean;
+  notificationTypes: Record<string, boolean>;
+  categories: Record<string, boolean>;
+  priorities: Record<string, boolean>;
+  frequency: 'IMMEDIATE' | 'DAILY' | 'WEEKLY';
     quietHours: {
       enabled: boolean;
       start: string;
       end: string;
     };
+  grouping: boolean;
+  retentionDays: number;
+  language: string;
     timezone: string;
-  };
 }
 
 export default function NotificationSettingsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [settings, setSettings] = useState<NotificationSettings>({
-    email: {
-      enabled: true,
-      frequency: 'immediate',
-      types: ['PUBLICACION_APROBADA', 'CAMBIOS_SOLICITADOS', 'REVISION_ASIGNADA']
-    },
-    push: {
-      enabled: true,
-      types: ['PUBLICACION_APROBADA', 'CAMBIOS_SOLICITADOS', 'REVISION_ASIGNADA', 'URGENTE']
-    },
-    inApp: {
-      enabled: true,
-      sound: true,
-      types: ['PUBLICACION_APROBADA', 'CAMBIOS_SOLICITADOS', 'REVISION_ASIGNADA', 'COMENTARIO', 'CITACION']
-    },
-    privacy: {
-      showReadStatus: true,
-      allowAnalytics: false
-    },
-    schedule: {
+    emailNotifications: true,
+    pushNotifications: true,
+    inAppNotifications: true,
+    notificationTypes: {},
+    categories: {},
+    priorities: {},
+    frequency: 'IMMEDIATE',
       quietHours: {
         enabled: false,
         start: '22:00',
         end: '08:00'
       },
+    grouping: true,
+    retentionDays: 30,
+    language: 'es',
       timezone: 'America/Mexico_City'
-    }
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  const notificationTypes = [
-    { value: 'PUBLICACION_APROBADA', label: 'Publicación Aprobada', icon: CheckCircle },
-    { value: 'CAMBIOS_SOLICITADOS', label: 'Cambios Solicitados', icon: AlertCircle },
-    { value: 'REVISION_ASIGNADA', label: 'Revisión Asignada', icon: Eye },
-    { value: 'COMENTARIO', label: 'Comentarios', icon: Tag },
-    { value: 'CITACION', label: 'Citaciones', icon: Globe },
-    { value: 'RECORDATORIO', label: 'Recordatorios', icon: Clock },
-    { value: 'SISTEMA', label: 'Sistema', icon: Settings },
-    { value: 'URGENTE', label: 'Urgentes', icon: AlertCircle }
-  ];
-
-  const frequencyOptions = [
-    { value: 'immediate', label: 'Inmediato' },
-    { value: 'daily', label: 'Diario' },
-    { value: 'weekly', label: 'Semanal' }
-  ];
-
-  const timezones = [
-    { value: 'America/Mexico_City', label: 'Ciudad de México (GMT-6)' },
-    { value: 'America/New_York', label: 'Nueva York (GMT-5)' },
-    { value: 'America/Los_Angeles', label: 'Los Ángeles (GMT-8)' },
-    { value: 'Europe/Madrid', label: 'Madrid (GMT+1)' },
-    { value: 'UTC', label: 'UTC' }
-  ];
-
-  // Fetch settings from API
-  const fetchSettings = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await notificationService.getNotificationSettings();
-      console.log('Settings Response:', response);
-      
-      if (response && response.settings) {
-        setSettings(response.settings);
-      }
-    } catch (error: any) {
-      console.error('Error fetching settings:', error);
-      setError(error.message || 'Error al cargar la configuración');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -140,33 +81,61 @@ export default function NotificationSettingsPage() {
     }
 
     if (isAuthenticated) {
-      fetchSettings();
+      loadSettings();
     }
   }, [isAuthenticated, isLoading]);
 
-  const handleSettingChange = (section: keyof NotificationSettings, key: string, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [key]: value
-      }
-    }));
+  const loadSettings = async () => {
+    try {
+      setLoading(true);
+      const savedSettings = await notificationService.getNotificationSettings();
+      
+      // Initialize notification types based on user roles
+      const userRoles = user?.roles || [];
+      const allowedTypes = new Set<string>();
+      
+      userRoles.forEach(role => {
+        const roleNotifications = ROLE_NOTIFICATION_TYPES[role as keyof typeof ROLE_NOTIFICATION_TYPES];
+        if (roleNotifications) {
+          roleNotifications.forEach(type => allowedTypes.add(type));
+        }
+      });
+
+      // Initialize default settings for allowed types
+      const notificationTypes: Record<string, boolean> = {};
+      const categories: Record<string, boolean> = {};
+      const priorities: Record<string, boolean> = {};
+
+      // Initialize all notification types
+      Object.values(NotificationType).forEach(type => {
+        notificationTypes[type] = allowedTypes.has(type);
+      });
+
+      // Initialize all categories
+      Object.values(NotificationCategory).forEach(category => {
+        categories[category] = true;
+      });
+
+      // Initialize all priorities
+      Object.values(NotificationPriority).forEach(priority => {
+        priorities[priority] = true;
+      });
+
+      setSettings({
+        ...savedSettings,
+        notificationTypes,
+        categories,
+        priorities
+      });
+    } catch (error: any) {
+      console.error('Error loading settings:', error);
+      setError(error.message || 'Error al cargar la configuración');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleTypeToggle = (section: 'email' | 'push' | 'inApp', type: string) => {
-    setSettings(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        types: prev[section].types.includes(type)
-          ? prev[section].types.filter(t => t !== type)
-          : [...prev[section].types, type]
-      }
-    }));
-  };
-
-  const handleSaveSettings = async () => {
+  const handleSave = async () => {
     try {
       setSaving(true);
       setError(null);
@@ -174,9 +143,6 @@ export default function NotificationSettingsPage() {
       
       await notificationService.updateNotificationSettings(settings);
       setSuccess('Configuración guardada exitosamente');
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
     } catch (error: any) {
       console.error('Error saving settings:', error);
       setError(error.message || 'Error al guardar la configuración');
@@ -185,9 +151,114 @@ export default function NotificationSettingsPage() {
     }
   };
 
+  const handleToggleType = (type: string) => {
+    setSettings(prev => ({
+      ...prev,
+      notificationTypes: {
+        ...prev.notificationTypes,
+        [type]: !prev.notificationTypes[type]
+      }
+    }));
+  };
+
+  const handleToggleCategory = (category: string) => {
+    setSettings(prev => ({
+      ...prev,
+      categories: {
+        ...prev.categories,
+        [category]: !prev.categories[category]
+      }
+    }));
+  };
+
+  const handleTogglePriority = (priority: string) => {
+    setSettings(prev => ({
+      ...prev,
+      priorities: {
+        ...prev.priorities,
+        [priority]: !prev.priorities[priority]
+      }
+    }));
+  };
+
   const getTypeIcon = (type: string) => {
-    const typeConfig = notificationTypes.find(t => t.value === type);
-    return typeConfig ? typeConfig.icon : Bell;
+    switch (type) {
+      case 'REVIEW_ASSIGNED':
+      case 'REVIEW_COMPLETED':
+      case 'REVIEW_OVERDUE':
+      case 'REVIEW_REMINDER':
+        return <Eye className="h-4 w-4" />;
+      case 'PUBLICATION_SUBMITTED':
+      case 'PUBLICATION_APPROVED':
+      case 'PUBLICATION_PUBLISHED':
+      case 'PUBLICATION_REJECTED':
+      case 'PUBLICATION_CHANGES_REQUESTED':
+        return <FileText className="h-4 w-4" />;
+      case 'USER_REGISTERED':
+      case 'USER_ROLE_CHANGED':
+      case 'USER_ACCOUNT_LOCKED':
+      case 'USER_ACCOUNT_UNLOCKED':
+        return <User className="h-4 w-4" />;
+      case 'SYSTEM_ALERT':
+      case 'SYSTEM_MAINTENANCE':
+      case 'SECURITY_ALERT':
+      case 'PERFORMANCE_ALERT':
+        return <Shield className="h-4 w-4" />;
+      case 'BACKUP_CREATED':
+      case 'BACKUP_RESTORED':
+      case 'BACKUP_FAILED':
+        return <Database className="h-4 w-4" />;
+      case 'CITATION_RECEIVED':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'COMMENT_RECEIVED':
+        return <Info className="h-4 w-4" />;
+      case 'NEW_PUBLICATION_AVAILABLE':
+        return <Bell className="h-4 w-4" />;
+      default:
+        return <Bell className="h-4 w-4" />;
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'PUBLICATION':
+        return <FileText className="h-4 w-4" />;
+      case 'REVIEW':
+        return <Eye className="h-4 w-4" />;
+      case 'SYSTEM':
+        return <Activity className="h-4 w-4" />;
+      case 'USER':
+        return <User className="h-4 w-4" />;
+      case 'ADMIN':
+        return <Shield className="h-4 w-4" />;
+      case 'EDITORIAL':
+        return <Settings className="h-4 w-4" />;
+      case 'SECURITY':
+        return <AlertTriangle className="h-4 w-4" />;
+      case 'PERFORMANCE':
+        return <Activity className="h-4 w-4" />;
+      case 'BACKUP':
+        return <Database className="h-4 w-4" />;
+      case 'EMAIL':
+        return <Mail className="h-4 w-4" />;
+      default:
+        return <Bell className="h-4 w-4" />;
+    }
+  };
+
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'URGENT':
+        return <AlertTriangle className="h-4 w-4" />;
+      case 'HIGH':
+        return <AlertTriangle className="h-4 w-4" />;
+      case 'MEDIUM':
+        return <Info className="h-4 w-4" />;
+      case 'LOW':
+        return <CheckCircle className="h-4 w-4" />;
+      default:
+        return <Bell className="h-4 w-4" />;
+    }
   };
 
   if (loading) {
@@ -211,339 +282,308 @@ export default function NotificationSettingsPage() {
       <div className="p-6">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <Settings className="w-6 h-6 text-white" />
+            </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Configuración de Notificaciones</h1>
-              <p className="mt-2 text-gray-600">
-                Personaliza cómo y cuándo recibir notificaciones
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={handleSaveSettings}
-                disabled={saving}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {saving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Guardar
-                  </>
-                )}
-              </button>
+              <p className="text-gray-600">Personaliza cómo recibes las notificaciones del sistema</p>
             </div>
           </div>
         </div>
 
-        {/* Success/Error Messages */}
+        {/* Error/Success Messages */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center">
+              <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+              <span className="text-red-700">{error}</span>
+            </div>
+          </div>
+        )}
+
         {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center">
               <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              <span className="text-green-800">{success}</span>
+              <span className="text-green-700">{success}</span>
             </div>
           </div>
         )}
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-            <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-              <span className="text-red-800">{error}</span>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Email Notifications */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* General Settings */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Delivery Methods */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center mb-4">
-              <Mail className="h-6 w-6 text-blue-600 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900">Notificaciones por Email</h3>
-            </div>
-            
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Bell className="h-5 w-5 mr-2" />
+                Métodos de Entrega
+              </h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Habilitar emails</span>
-                <button
-                  onClick={() => handleSettingChange('email', 'enabled', !settings.email.enabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.email.enabled ? 'bg-indigo-600' : 'bg-gray-200'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.email.enabled ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
+                  <div className="flex items-center space-x-3">
+                    <Mail className="h-5 w-5 text-gray-500" />
+                    <div>
+                      <p className="font-medium text-gray-900">Notificaciones por Email</p>
+                      <p className="text-sm text-gray-500">Recibe notificaciones en tu correo electrónico</p>
               </div>
-
-              {settings.email.enabled && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Frecuencia de emails
-                    </label>
-                    <select
-                      value={settings.email.frequency}
-                      onChange={(e) => handleSettingChange('email', 'frequency', e.target.value)}
-                      className="block w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    >
-                      {frequencyOptions.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Tipos de notificaciones por email
-                    </label>
-                    <div className="space-y-2">
-                      {notificationTypes.map(type => {
-                        const Icon = getTypeIcon(type.value);
-                        return (
-                          <label key={type.value} className="flex items-center">
+                  <label className="relative inline-flex items-center cursor-pointer">
                             <input
                               type="checkbox"
-                              checked={settings.email.types.includes(type.value)}
-                              onChange={() => handleTypeToggle('email', type.value)}
-                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                            />
-                            <Icon className="h-4 w-4 ml-2 text-gray-500" />
-                            <span className="ml-2 text-sm text-gray-700">{type.label}</span>
+                      checked={settings.emailNotifications}
+                      onChange={(e) => setSettings(prev => ({ ...prev, emailNotifications: e.target.checked }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                           </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
           </div>
 
-          {/* Push Notifications */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center mb-4">
-              <Smartphone className="h-6 w-6 text-green-600 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900">Notificaciones Push</h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Smartphone className="h-5 w-5 text-gray-500" />
+                    <div>
+                      <p className="font-medium text-gray-900">Notificaciones Push</p>
+                      <p className="text-sm text-gray-500">Recibe notificaciones en tu dispositivo móvil</p>
             </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Habilitar push</span>
-                <button
-                  onClick={() => handleSettingChange('push', 'enabled', !settings.push.enabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.push.enabled ? 'bg-green-600' : 'bg-gray-200'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.push.enabled ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
               </div>
-
-              {settings.push.enabled && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Tipos de notificaciones push
-                  </label>
-                  <div className="space-y-2">
-                    {notificationTypes.map(type => {
-                      const Icon = getTypeIcon(type.value);
-                      return (
-                        <label key={type.value} className="flex items-center">
+                  <label className="relative inline-flex items-center cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={settings.push.types.includes(type.value)}
-                            onChange={() => handleTypeToggle('push', type.value)}
-                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                          />
-                          <Icon className="h-4 w-4 ml-2 text-gray-500" />
-                          <span className="ml-2 text-sm text-gray-700">{type.label}</span>
+                      checked={settings.pushNotifications}
+                      onChange={(e) => setSettings(prev => ({ ...prev, pushNotifications: e.target.checked }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                         </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* In-App Notifications */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center mb-4">
-              <Bell className="h-6 w-6 text-purple-600 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900">Notificaciones en la App</h3>
             </div>
             
-            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Habilitar notificaciones</span>
-                <button
-                  onClick={() => handleSettingChange('inApp', 'enabled', !settings.inApp.enabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.inApp.enabled ? 'bg-purple-600' : 'bg-gray-200'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.inApp.enabled ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
+                  <div className="flex items-center space-x-3">
+                    <Monitor className="h-5 w-5 text-gray-500" />
+                    <div>
+                      <p className="font-medium text-gray-900">Notificaciones en la Aplicación</p>
+                      <p className="text-sm text-gray-500">Recibe notificaciones dentro de la aplicación web</p>
               </div>
-
-              {settings.inApp.enabled && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">Sonido de notificaciones</span>
-                    <button
-                      onClick={() => handleSettingChange('inApp', 'sound', !settings.inApp.sound)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        settings.inApp.sound ? 'bg-purple-600' : 'bg-gray-200'
-                      }`}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        settings.inApp.sound ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </button>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Tipos de notificaciones en la app
-                    </label>
-                    <div className="space-y-2">
-                      {notificationTypes.map(type => {
-                        const Icon = getTypeIcon(type.value);
-                        return (
-                          <label key={type.value} className="flex items-center">
+                  <label className="relative inline-flex items-center cursor-pointer">
                             <input
                               type="checkbox"
-                              checked={settings.inApp.types.includes(type.value)}
-                              onChange={() => handleTypeToggle('inApp', type.value)}
-                              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                            />
-                            <Icon className="h-4 w-4 ml-2 text-gray-500" />
-                            <span className="ml-2 text-sm text-gray-700">{type.label}</span>
+                      checked={settings.inAppNotifications}
+                      onChange={(e) => setSettings(prev => ({ ...prev, inAppNotifications: e.target.checked }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                           </label>
-                        );
-                      })}
                     </div>
-                  </div>
-                </>
-              )}
             </div>
           </div>
 
-          {/* Privacy Settings */}
+            {/* Frequency Settings */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center mb-4">
-              <Shield className="h-6 w-6 text-orange-600 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900">Privacidad</h3>
-            </div>
-            
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Clock className="h-5 w-5 mr-2" />
+                Frecuencia de Notificaciones
+              </h3>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Mostrar estado de lectura</span>
-                <button
-                  onClick={() => handleSettingChange('privacy', 'showReadStatus', !settings.privacy.showReadStatus)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.privacy.showReadStatus ? 'bg-orange-600' : 'bg-gray-200'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.privacy.showReadStatus ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Frecuencia de entrega
+                  </label>
+                  <select
+                    value={settings.frequency}
+                    onChange={(e) => setSettings(prev => ({ ...prev, frequency: e.target.value as any }))}
+                    className="block w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="IMMEDIATE">Inmediata</option>
+                    <option value="DAILY">Diaria (resumen)</option>
+                    <option value="WEEKLY">Semanal (resumen)</option>
+                  </select>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Permitir análisis</span>
-                <button
-                  onClick={() => handleSettingChange('privacy', 'allowAnalytics', !settings.privacy.allowAnalytics)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.privacy.allowAnalytics ? 'bg-orange-600' : 'bg-gray-200'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.privacy.allowAnalytics ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
+                  <div className="flex items-center space-x-3">
+                    <Volume2 className="h-5 w-5 text-gray-500" />
+                    <div>
+                      <p className="font-medium text-gray-900">Horas Silenciosas</p>
+                      <p className="text-sm text-gray-500">No recibir notificaciones durante ciertas horas</p>
               </div>
             </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.quietHours.enabled}
+                      onChange={(e) => setSettings(prev => ({ 
+                        ...prev, 
+                        quietHours: { ...prev.quietHours, enabled: e.target.checked }
+                      }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
           </div>
 
-          {/* Schedule Settings */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center mb-4">
-              <Clock className="h-6 w-6 text-indigo-600 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900">Horario</h3>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Horas silenciosas</span>
-                <button
-                  onClick={() => handleSettingChange('schedule', 'quietHours', { ...settings.schedule.quietHours, enabled: !settings.schedule.quietHours.enabled })}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.schedule.quietHours.enabled ? 'bg-indigo-600' : 'bg-gray-200'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.schedule.quietHours.enabled ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
-              </div>
-
-              {settings.schedule.quietHours.enabled && (
+                {settings.quietHours.enabled && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Inicio
+                        Hora de inicio
                     </label>
                     <input
                       type="time"
-                      value={settings.schedule.quietHours.start}
-                      onChange={(e) => handleSettingChange('schedule', 'quietHours', { ...settings.schedule.quietHours, start: e.target.value })}
+                        value={settings.quietHours.start}
+                        onChange={(e) => setSettings(prev => ({ 
+                          ...prev, 
+                          quietHours: { ...prev.quietHours, start: e.target.value }
+                        }))}
                       className="block w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fin
+                        Hora de fin
                     </label>
                     <input
                       type="time"
-                      value={settings.schedule.quietHours.end}
-                      onChange={(e) => handleSettingChange('schedule', 'quietHours', { ...settings.schedule.quietHours, end: e.target.value })}
+                        value={settings.quietHours.end}
+                        onChange={(e) => setSettings(prev => ({ 
+                          ...prev, 
+                          quietHours: { ...prev.quietHours, end: e.target.value }
+                        }))}
                       className="block w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
                 </div>
               )}
+              </div>
+            </div>
 
+            {/* Notification Types */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Bell className="h-5 w-5 mr-2" />
+                Tipos de Notificación
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(settings.notificationTypes).map(([type, enabled]) => (
+                  <div key={type} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {getTypeIcon(type)}
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{type.replace(/_/g, ' ')}</p>
+                      </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={() => handleToggleType(type)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar Settings */}
+          <div className="space-y-6">
+            {/* Categories */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Tag className="h-5 w-5 mr-2" />
+                Categorías
+              </h3>
+              <div className="space-y-3">
+                {Object.entries(settings.categories).map(([category, enabled]) => (
+                  <div key={category} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      {getCategoryIcon(category)}
+                      <span className="text-sm text-gray-700">{category}</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={() => handleToggleCategory(category)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Priorities */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <AlertTriangle className="h-5 w-5 mr-2" />
+                Prioridades
+              </h3>
+              <div className="space-y-3">
+                {Object.entries(settings.priorities).map(([priority, enabled]) => (
+                  <div key={priority} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      {getPriorityIcon(priority)}
+                      <span className="text-sm text-gray-700">{priority}</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={() => handleTogglePriority(priority)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Additional Settings */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Settings className="h-5 w-5 mr-2" />
+                Configuración Adicional
+              </h3>
+              <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Zona horaria
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Retención de notificaciones (días)
                 </label>
-                <select
-                  value={settings.schedule.timezone}
-                  onChange={(e) => handleSettingChange('schedule', 'timezone', e.target.value)}
+                  <input
+                    type="number"
+                    min="1"
+                    max="365"
+                    value={settings.retentionDays}
+                    onChange={(e) => setSettings(prev => ({ ...prev, retentionDays: parseInt(e.target.value) }))}
                   className="block w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  {timezones.map(tz => (
-                    <option key={tz.value} value={tz.value}>
-                      {tz.label}
-                    </option>
-                  ))}
-                </select>
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Globe className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">Agrupar notificaciones</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.grouping}
+                      onChange={(e) => setSettings(prev => ({ ...prev, grouping: e.target.checked }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -552,18 +592,18 @@ export default function NotificationSettingsPage() {
         {/* Save Button */}
         <div className="mt-8 flex justify-end">
           <button
-            onClick={handleSaveSettings}
+            onClick={handleSave}
             disabled={saving}
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-medium rounded-lg hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
           >
             {saving ? (
               <>
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                Guardando configuración...
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                Guardando...
               </>
             ) : (
               <>
-                <Save className="h-5 w-5 mr-2" />
+                <Save className="h-4 w-4 mr-2" />
                 Guardar Configuración
               </>
             )}
@@ -573,3 +613,4 @@ export default function NotificationSettingsPage() {
     </Layout>
   );
 }
+
