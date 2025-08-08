@@ -13,7 +13,8 @@ import java.util.UUID;
 @Entity(name = "publicaciones")
 @Setter
 @Getter
-@Inheritance(strategy = InheritanceType.JOINED)
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "tipo_publicacion", discriminatorType = DiscriminatorType.STRING)
 public abstract class Publicacion {
 
     @Id
@@ -58,7 +59,7 @@ public abstract class Publicacion {
     @Column(nullable = false)
     private TipoPublicacion tipo;
 
-    @Column(columnDefinition = "JSONB")
+    @Column(columnDefinition = "TEXT")
     private String metadatos; // JSON con isbn, doi, paginas, categoria, licencia, etc.
 
     @PreUpdate

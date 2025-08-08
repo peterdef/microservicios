@@ -10,8 +10,6 @@ interface AuthContextType extends AuthState {
   register: (userData: RegisterFormData) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
-  updateProfile: (userData: Partial<User>) => Promise<void>;
-  changePassword: (passwordData: { currentPassword: string; newPassword: string }) => Promise<void>;
   refreshToken: () => Promise<void>;
 }
 
@@ -44,28 +42,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const user = tokenUtils.getUser();
 
       if (token && user) {
-        const isValid = await authService.validateToken(token);
-        if (isValid) {
-          setAuthState({
-            user,
-            token,
-            isAuthenticated: true,
-            isLoading: false,
-          });
-        } else {
-          // Try to refresh token
-          try {
-            await refreshToken();
-          } catch (error) {
-            tokenUtils.clearAuth();
-            setAuthState({
-              user: null,
-              token: null,
-              isAuthenticated: false,
-              isLoading: false,
-            });
-          }
-        }
+        // Since validateToken endpoint doesn't exist, we'll just check if we have valid data
+        setAuthState({
+          user,
+          token,
+          isAuthenticated: true,
+          isLoading: false,
+        });
       } else {
         setAuthState({
           user: null,
@@ -189,10 +172,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      await authService.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
+      // Since logout endpoint doesn't exist, we'll just clear local storage
       tokenUtils.clearAuth();
       setAuthState({
         user: null,
@@ -202,33 +182,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       // Redirect to login page
       router.push('/login');
-    }
-  };
-
-  const updateProfile = async (userData: Partial<User>) => {
-    try {
-      const response = await authService.updateProfile(userData);
-      
-      const updatedUser: User = {
-        ...authState.user!,
-        ...response,
-      };
-
-      tokenUtils.setUser(updatedUser);
-      setAuthState(prev => ({
-        ...prev,
-        user: updatedUser,
-      }));
-    } catch (error: any) {
-      throw new Error(error.message || 'Error al actualizar perfil');
-    }
-  };
-
-  const changePassword = async (passwordData: { currentPassword: string; newPassword: string }) => {
-    try {
-      await authService.changePassword(passwordData);
-    } catch (error: any) {
-      throw new Error(error.message || 'Error al cambiar contraseña');
+    } catch (error) {
+      console.error('Logout error:', error);
     }
   };
 
@@ -242,8 +197,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     checkAuth,
-    updateProfile,
-    changePassword,
     refreshToken,
   };
 

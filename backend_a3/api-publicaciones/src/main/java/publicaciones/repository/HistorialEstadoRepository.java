@@ -18,3 +18,4 @@ public interface HistorialEstadoRepository extends JpaRepository<HistorialEstado
     
     List<HistorialEstado> findByMotivoCambioOrderByFechaCambioDesc(String motivoCambio);
 }
+

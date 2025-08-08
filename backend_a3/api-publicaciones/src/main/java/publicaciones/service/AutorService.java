@@ -43,7 +43,7 @@ public class AutorService {
 
     public List<ResponseDto> listarAutores() {
         return autorRepository.findAll().stream()
-                .map(autor -> new ResponseDto("Autor: " + autor.getApellido(), autor))
+                .map(autor -> new ResponseDto("Autor: " + autor.getApellidos(), autor))
                 .collect(Collectors.toList());
     }
 

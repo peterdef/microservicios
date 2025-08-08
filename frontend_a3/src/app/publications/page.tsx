@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { Layout } from '../../components/Layout';
 import { Publication, PublicationStatus, PublicationType } from '../../types/publication';
+import { publicationService } from '../../services/publicationService';
 import { 
   Plus, 
   Search, 
@@ -38,6 +39,7 @@ export default function PublicationsPage() {
   const router = useRouter();
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<PublicationStatus | ''>('');
   const [typeFilter, setTypeFilter] = useState<PublicationType | ''>('');
@@ -47,133 +49,24 @@ export default function PublicationsPage() {
   const [sortBy, setSortBy] = useState('fecha');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Mock data for publications
-  const mockPublications: Publication[] = [
-    {
-      id: '1',
-      titulo: 'Análisis de Algoritmos de Machine Learning',
-      resumen: 'Estudio comparativo de algoritmos de machine learning para clasificación de datos. Se analizan diferentes técnicas y su rendimiento en diversos conjuntos de datos.',
-      tipo: PublicationType.ARTICULO,
-      estado: PublicationStatus.PUBLICADO,
-      autorPrincipalId: '1',
-      versionActual: '1.0',
-      fechaCreacion: '2024-01-15T10:00:00Z',
-      fechaActualizacion: '2024-02-01T10:00:00Z',
-      palabrasClave: ['machine learning', 'algoritmos', 'clasificación', 'inteligencia artificial'],
-      referenciasBibliograficas: [
-        'Smith, J. (2023). Machine Learning Fundamentals. Journal of AI, 15(2), 45-67.',
-        'García, M. (2023). Comparative Analysis of ML Algorithms. Computer Science Review, 8(1), 23-41.'
-      ],
-      metadatos: {
-        doi: '10.1000/example.2024.001',
-        issn: '1234-5678',
-        paginas: 15,
-        categoria: 'Computer Science',
-        licencia: 'CC BY 4.0'
-      }
-    },
-    {
-      id: '2',
-      titulo: 'Fundamentos de Programación Web',
-      resumen: 'Guía completa de desarrollo web moderno que cubre HTML5, CSS3, JavaScript ES6+ y frameworks populares como React y Vue.js.',
-      tipo: PublicationType.LIBRO,
-      estado: PublicationStatus.EN_REVISION,
-      autorPrincipalId: '1',
-      versionActual: '1.0',
-      fechaCreacion: '2024-01-20T10:00:00Z',
-      palabrasClave: ['programación', 'web', 'desarrollo', 'frontend'],
-      isbn: '978-0-123456-78-9',
-      numeroPaginas: 350,
-      edicion: '1',
-      capitulos: [
-        { numero: 1, titulo: 'Introducción a HTML', resumenCapitulo: 'Conceptos básicos de HTML5' },
-        { numero: 2, titulo: 'CSS Avanzado', resumenCapitulo: 'Estilos y layouts modernos' },
-        { numero: 3, titulo: 'JavaScript Moderno', resumenCapitulo: 'ES6+ y programación funcional' },
-        { numero: 4, titulo: 'React Fundamentals', resumenCapitulo: 'Componentes y hooks' },
-        { numero: 5, titulo: 'Vue.js Essentials', resumenCapitulo: 'Framework progresivo' }
-      ]
-    },
-    {
-      id: '3',
-      titulo: 'Inteligencia Artificial en Medicina',
-      resumen: 'Aplicaciones de inteligencia artificial en diagnóstico médico, incluyendo análisis de imágenes médicas y predicción de enfermedades.',
-      tipo: PublicationType.ARTICULO,
-      estado: PublicationStatus.CAMBIOS_SOLICITADOS,
-      autorPrincipalId: '1',
-      versionActual: '1.0',
-      fechaCreacion: '2024-01-25T10:00:00Z',
-      palabrasClave: ['IA', 'medicina', 'diagnóstico', 'imágenes médicas'],
-      referenciasBibliograficas: [
-        'Johnson, A. (2023). AI in Medical Imaging. Medical AI Journal, 12(3), 78-95.',
-        'Brown, L. (2023). Predictive Medicine with AI. Healthcare Technology, 5(2), 34-52.'
-      ],
-      metadatos: {
-        doi: '10.1000/example.2024.002',
-        issn: '2345-6789',
-        paginas: 30,
-        categoria: 'Medical AI',
-        licencia: 'CC BY 4.0'
-      }
-    },
-    {
-      id: '4',
-      titulo: 'Blockchain y Criptomonedas',
-      resumen: 'Análisis del impacto de blockchain en finanzas, incluyendo Bitcoin, Ethereum y aplicaciones descentralizadas.',
-      tipo: PublicationType.ARTICULO,
-      estado: PublicationStatus.BORRADOR,
-      autorPrincipalId: '1',
-      versionActual: '1.0',
-      fechaCreacion: '2024-01-30T10:00:00Z',
-      palabrasClave: ['blockchain', 'criptomonedas', 'fintech', 'descentralización'],
-      referenciasBibliograficas: [
-        'Nakamoto, S. (2008). Bitcoin: A Peer-to-Peer Electronic Cash System.',
-        'Buterin, V. (2014). Ethereum: A Next-Generation Smart Contract Platform.'
-      ]
-    },
-    {
-      id: '5',
-      titulo: 'Ciberseguridad en la Era Digital',
-      resumen: 'Guía completa sobre seguridad informática, incluyendo amenazas, vulnerabilidades y mejores prácticas de protección.',
-      tipo: PublicationType.LIBRO,
-      estado: PublicationStatus.APROBADO,
-      autorPrincipalId: '1',
-      versionActual: '1.0',
-      fechaCreacion: '2024-02-05T10:00:00Z',
-      palabrasClave: ['ciberseguridad', 'seguridad informática', 'amenazas', 'protección'],
-      isbn: '978-0-987654-32-1',
-      numeroPaginas: 280,
-      edicion: '1',
-      capitulos: [
-        { numero: 1, titulo: 'Fundamentos de Ciberseguridad', resumenCapitulo: 'Conceptos básicos de seguridad' },
-        { numero: 2, titulo: 'Amenazas y Vulnerabilidades', resumenCapitulo: 'Tipos de ataques informáticos' },
-        { numero: 3, titulo: 'Protección de Datos', resumenCapitulo: 'Estrategias de protección' },
-        { numero: 4, titulo: 'Criptografía Aplicada', resumenCapitulo: 'Técnicas de encriptación' }
-      ]
-    },
-    {
-      id: '6',
-      titulo: 'Análisis de Datos con Python',
-      resumen: 'Técnicas avanzadas de análisis de datos utilizando Python, pandas, numpy y scikit-learn.',
-      tipo: PublicationType.ARTICULO,
-      estado: PublicationStatus.PUBLICADO,
-      autorPrincipalId: '1',
-      versionActual: '1.0',
-      fechaCreacion: '2024-02-10T10:00:00Z',
-      fechaActualizacion: '2024-03-01T10:00:00Z',
-      palabrasClave: ['python', 'análisis de datos', 'pandas', 'scikit-learn'],
-      referenciasBibliograficas: [
-        'McKinney, W. (2017). Python for Data Analysis. O\'Reilly Media.',
-        'Pedregosa, F. (2011). Scikit-learn: Machine Learning in Python. JMLR, 12, 2825-2830.'
-      ],
-      metadatos: {
-        doi: '10.1000/example.2024.003',
-        issn: '3456-7890',
-        paginas: 45,
-        categoria: 'Data Science',
-        licencia: 'CC BY 4.0'
-      }
+  // Fetch publications from API
+  const fetchPublications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch all publications for the current user
+      const response = await publicationService.getMyPublications();
+      const fetchedPublications = response.content || response; // Handle both paginated and direct array responses
+      setPublications(fetchedPublications);
+      setTotalPages(Math.ceil(fetchedPublications.length / 5));
+    } catch (error: any) {
+      console.error('Error fetching publications:', error);
+      setError(error.message || 'Error al cargar las publicaciones');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -181,14 +74,22 @@ export default function PublicationsPage() {
       return;
     }
 
-    // Simulate API call delay
-    setLoading(true);
-    setTimeout(() => {
-      setPublications(mockPublications);
-      setTotalPages(Math.ceil(mockPublications.length / 5));
-      setLoading(false);
-    }, 500);
+    if (isAuthenticated) {
+      fetchPublications();
+    }
   }, [isAuthenticated, isLoading, router]);
+
+  // Refresh publications when returning from create page
+  useEffect(() => {
+    const handleFocus = () => {
+      if (isAuthenticated) {
+        fetchPublications();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [isAuthenticated]);
 
   const getStatusColor = (status: PublicationStatus) => {
     const statusColors: { [key in PublicationStatus]: string } = {
@@ -218,29 +119,34 @@ export default function PublicationsPage() {
     return type === PublicationType.ARTICULO ? <FileText className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />;
   };
 
-  const handlePublicationAction = (action: string, publicationId: string) => {
-    console.log(`${action} publication ${publicationId}`);
-    // Here you would implement the actual action
-    switch (action) {
-      case 'view':
-        router.push(`/publications/${publicationId}`);
-        break;
-      case 'edit':
-        router.push(`/publications/${publicationId}/edit`);
-        break;
-      case 'delete':
-        if (confirm('¿Estás seguro de que quieres eliminar esta publicación?')) {
-          console.log('Deleting publication:', publicationId);
-        }
-        break;
-      case 'share':
-        // Implement share functionality
-        console.log('Sharing publication:', publicationId);
-        break;
-      case 'download':
-        // Implement download functionality
-        console.log('Downloading publication:', publicationId);
-        break;
+  const handlePublicationAction = async (action: string, publicationId: string) => {
+    try {
+      switch (action) {
+        case 'view':
+          router.push(`/publications/${publicationId}`);
+          break;
+        case 'edit':
+          router.push(`/publications/${publicationId}/edit`);
+          break;
+        case 'delete':
+          if (confirm('¿Estás seguro de que quieres eliminar esta publicación?')) {
+            await publicationService.deletePublication(publicationId);
+            // Refresh the publications list
+            fetchPublications();
+          }
+          break;
+        case 'share':
+          // Implement share functionality
+          console.log('Sharing publication:', publicationId);
+          break;
+        case 'download':
+          // Implement download functionality
+          console.log('Downloading publication:', publicationId);
+          break;
+      }
+    } catch (error: any) {
+      console.error(`Error in ${action} action:`, error);
+      alert(error.message || `Error al ${action} la publicación`);
     }
   };
 
@@ -318,6 +224,28 @@ export default function PublicationsPage() {
 
   if (!isAuthenticated) {
     return null;
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="h-10 w-10 text-red-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error al cargar publicaciones</h3>
+            <p className="text-gray-500 mb-6">{error}</p>
+            <button
+              onClick={fetchPublications}
+              className="btn-primary inline-flex items-center px-6 py-3"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (
@@ -555,7 +483,7 @@ export default function PublicationsPage() {
                       <div className="flex items-center space-x-6 text-xs text-gray-500 mb-4">
                         <div className="flex items-center space-x-1">
                           <User className="h-3 w-3" />
-                          <span>Juan Pérez</span>
+                          <span>{publication.autor || 'Autor'}</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Calendar className="h-3 w-3" />

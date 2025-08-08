@@ -1,274 +1,197 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   FileText, 
-  BookOpen, 
-  Eye, 
   Users, 
+  Bell, 
   TrendingUp, 
-  TrendingDown,
-  Calendar,
+  Eye, 
+  Download, 
+  Share2,
   Clock,
-  Star,
   CheckCircle,
   AlertCircle,
+  XCircle,
+  Star,
+  MessageSquare,
+  Calendar,
   BarChart3,
   Activity,
-  Bell,
+  BookOpen,
+  Info,
+  AlertTriangle,
   Plus,
-  Search,
-  ArrowUpRight,
-  ArrowDownRight,
   Sparkles,
+  Rocket,
+  Grid,
+  List,
+  ArrowUpRight,
   Target,
   Award,
   Zap,
-  Globe,
-  Bookmark,
-  Lightbulb,
-  Rocket,
-  Home,
-  Settings,
-  Mail,
-  MessageSquare,
-  Download,
-  Share2,
-  Heart,
-  ThumbsUp,
-  CalendarDays,
-  Clock3,
-  Users2,
-  AlertTriangle,
-  Info,
-  ExternalLink,
-  ChevronRight,
-  Play,
-  Pause,
   RefreshCw,
   Filter,
-  Grid,
-  List,
   MoreHorizontal,
-  Edit3,
-  Trash2,
-  Copy,
-  Link as LinkIcon
+  CalendarDays,
+  Clock3,
+  Bookmark,
+  Search
 } from 'lucide-react';
 import Link from 'next/link';
 
+// Helper function to get auth token
+const getAuthToken = () => localStorage.getItem('auth_token');
+
 interface DashboardStats {
   totalPublications: number;
-  myPublications: number;
-  pendingReviews: number;
+  publishedPublications: number;
+  draftPublications: number;
+  inReviewPublications: number;
+  totalReviews: number;
   completedReviews: number;
-  recentActivity: number;
-  publicationsByStatus: { status: string; count: number }[];
-  publicationsByType: { type: string; count: number }[];
-  recentPublications: Array<{
-    id: string;
-    title: string;
-    status: string;
-    date: string;
-    type: string;
-    views?: number;
-    downloads?: number;
-    likes?: number;
-  }>;
-  recentReviews: Array<{
-    id: string;
-    publicationTitle: string;
-    status: string;
-    date: string;
-    reviewer?: string;
-  }>;
-  notifications: Array<{
-    id: string;
-    title: string;
-    message: string;
-    type: 'info' | 'success' | 'warning' | 'error';
-    date: string;
-    read: boolean;
-  }>;
-  activityTimeline: Array<{
-    id: string;
-    action: string;
-    description: string;
-    date: string;
-    icon: string;
-    color: string;
-  }>;
+  pendingReviews: number;
+  unreadNotifications: number;
+  totalNotifications: number;
+}
+
+interface Publication {
+  id: number;
+  titulo: string;
+  resumen: string;
+  tipo: string;
+  estado: string;
+  autorId: number;
+  autor: string;
+  fechaCreacion: string;
+  fechaPublicacion?: string;
+  palabrasClave?: string[];
+  referencias?: string[];
+  metadata?: any;
+  isbn?: string;
+  numeroPaginas?: number;
+  edicion?: number;
+  capitulos?: any[];
+}
+
+interface Review {
+  id: number;
+  publicacionId: number;
+  publicacionTitulo: string;
+  revisorId: number;
+  revisor: string;
+  estado: string;
+  fechaAsignacion: string;
+  fechaInicio?: string;
+  prioridad: string;
+  recomendacion?: string;
+  comentarios?: any[];
+}
+
+interface Notification {
+  id: number;
+  usuarioId: number;
+  tipo: string;
+  titulo: string;
+  mensaje: string;
+  estado: string;
+  prioridad: string;
+  fechaCreacion: string;
+  leida: boolean;
 }
 
 export function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [publications, setPublications] = useState<Publication[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedFilter, setSelectedFilter] = useState('all');
 
-  // Mock dashboard data with more realistic and engaging content
-  const mockStats: DashboardStats = {
-    totalPublications: 45,
-    myPublications: 12,
-    pendingReviews: 3,
-    completedReviews: 8,
-    recentActivity: 15,
-    publicationsByStatus: [
-      { status: 'BORRADOR', count: 8 },
-      { status: 'EN_REVISION', count: 15 },
-      { status: 'APROBADO', count: 12 },
-      { status: 'PUBLICADO', count: 10 }
-    ],
-    publicationsByType: [
-      { type: 'ARTICULO', count: 32 },
-      { type: 'LIBRO', count: 13 }
-    ],
-    recentPublications: [
-      {
-        id: '1',
-        title: 'Análisis de Algoritmos de Machine Learning',
-        status: 'EN_REVISION',
-        date: '2024-01-25',
-        type: 'ARTICULO',
-        views: 156,
-        downloads: 23,
-        likes: 12
-      },
-      {
-        id: '2',
-        title: 'Fundamentos de Programación Web',
-        status: 'BORRADOR',
-        date: '2024-01-24',
-        type: 'LIBRO',
-        views: 89,
-        downloads: 5,
-        likes: 8
-      },
-      {
-        id: '3',
-        title: 'Inteligencia Artificial en Medicina',
-        status: 'APROBADO',
-        date: '2024-01-23',
-        type: 'ARTICULO',
-        views: 234,
-        downloads: 45,
-        likes: 28
-      },
-      {
-        id: '4',
-        title: 'Blockchain y Criptomonedas',
-        status: 'PUBLICADO',
-        date: '2024-01-22',
-        type: 'ARTICULO',
-        views: 567,
-        downloads: 89,
-        likes: 67
-      }
-    ],
-    recentReviews: [
-      {
-        id: '1',
-        publicationTitle: 'Blockchain y Criptomonedas',
-        status: 'EN_PROCESO',
-        date: '2024-01-25',
-        reviewer: 'Dr. María García'
-      },
-      {
-        id: '2',
-        publicationTitle: 'Desarrollo de Aplicaciones Móviles',
-        status: 'COMPLETADA',
-        date: '2024-01-24',
-        reviewer: 'Dr. Carlos López'
-      },
-      {
-        id: '3',
-        publicationTitle: 'Ciberseguridad Avanzada',
-        status: 'EN_PROCESO',
-        date: '2024-01-23',
-        reviewer: 'Dr. Ana Martínez'
-      }
-    ],
-    notifications: [
-      {
-        id: '1',
-        title: 'Nueva publicación aprobada',
-        message: 'Tu artículo "Machine Learning Fundamentals" ha sido aprobado para publicación.',
-        type: 'success',
-        date: '2024-01-25T10:30:00Z',
-        read: false
-      },
-      {
-        id: '2',
-        title: 'Revisión solicitada',
-        message: 'Se te ha asignado una nueva revisión: "Data Science Applications".',
-        type: 'info',
-        date: '2024-01-24T15:45:00Z',
-        read: false
-      },
-      {
-        id: '3',
-        title: 'Cambios requeridos',
-        message: 'Tu publicación "Web Development Guide" requiere algunos cambios antes de la aprobación.',
-        type: 'warning',
-        date: '2024-01-23T09:15:00Z',
-        read: true
-      }
-    ],
-    activityTimeline: [
-      {
-        id: '1',
-        action: 'Publicación creada',
-        description: 'Nueva publicación "AI in Healthcare" creada',
-        date: '2024-01-25T14:30:00Z',
-        icon: 'FileText',
-        color: 'blue'
-      },
-      {
-        id: '2',
-        action: 'Revisión completada',
-        description: 'Revisión de "Blockchain Basics" completada',
-        date: '2024-01-24T16:20:00Z',
-        icon: 'CheckCircle',
-        color: 'green'
-      },
-      {
-        id: '3',
-        action: 'Artículo publicado',
-        description: 'Artículo "Machine Learning Fundamentals" publicado',
-        date: '2024-01-23T11:45:00Z',
-        icon: 'Star',
-        color: 'purple'
-      },
-      {
-        id: '4',
-        action: 'Comentario recibido',
-        description: 'Nuevo comentario en "Web Development Guide"',
-        date: '2024-01-22T13:15:00Z',
-        icon: 'MessageSquare',
-        color: 'orange'
-      }
-    ]
-  };
-
   useEffect(() => {
     const loadDashboardData = async () => {
+      if (!user) return;
+
       try {
         setLoading(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setStats(mockStats);
+        setError('');
+        
+        // Load dashboard statistics
+        const statsResponse = await fetch('/api/dashboard/stats', {
+          headers: {
+            'Authorization': `Bearer ${getAuthToken()}`
+          }
+        });
+        
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          setStats(statsData);
+        } else {
+          console.error('Error loading stats:', statsResponse.status, statsResponse.statusText);
+          if (statsResponse.status === 401) {
+            setError('Error de autenticación. Por favor, inicie sesión nuevamente.');
+          } else if (statsResponse.status === 404) {
+            setError('Servidor mock no disponible. Ejecute "node mock-server.js" en una nueva terminal.');
+          } else {
+            setError('No se pudieron cargar las estadísticas del dashboard.');
+          }
+        }
+
+        // Load user publications
+        const publicationsResponse = await fetch('/api/publicaciones/mis-publicaciones', {
+          headers: {
+            'Authorization': `Bearer ${getAuthToken()}`
+          }
+        });
+        
+        if (publicationsResponse.ok) {
+          const publicationsData = await publicationsResponse.json();
+          setPublications(publicationsData.content || []);
+        } else {
+          console.error('Error loading publications:', publicationsResponse.status, publicationsResponse.statusText);
+        }
+
+        // Load user reviews
+        const reviewsResponse = await fetch('/api/reviews/mis-reviews', {
+          headers: {
+            'Authorization': `Bearer ${getAuthToken()}`
+          }
+        });
+        
+        if (reviewsResponse.ok) {
+          const reviewsData = await reviewsResponse.json();
+          setReviews(reviewsData.content || []);
+        } else {
+          console.error('Error loading reviews:', reviewsResponse.status, reviewsResponse.statusText);
+        }
+
+        // Load user notifications
+        const notificationsResponse = await fetch('/api/notificaciones/mis-notificaciones', {
+          headers: {
+            'Authorization': `Bearer ${getAuthToken()}`
+          }
+        });
+        
+        if (notificationsResponse.ok) {
+          const notificationsData = await notificationsResponse.json();
+          setNotifications(notificationsData.content || []);
+        } else {
+          console.error('Error loading notifications:', notificationsResponse.status, notificationsResponse.statusText);
+        }
+
       } catch (error) {
         console.error('Error loading dashboard data:', error);
+        setError('Error al cargar los datos del dashboard. Verifique que el servidor esté funcionando.');
       } finally {
         setLoading(false);
       }
     };
 
-    if (user) {
-      loadDashboardData();
-    }
+    loadDashboardData();
   }, [user]);
 
   const getStatusColor = (status: string) => {
@@ -278,7 +201,8 @@ export function Dashboard() {
       'APROBADO': 'bg-emerald-100 text-emerald-800',
       'PUBLICADO': 'bg-blue-100 text-blue-800',
       'EN_PROCESO': 'bg-orange-100 text-orange-800',
-      'COMPLETADA': 'bg-emerald-100 text-emerald-800'
+      'COMPLETADA': 'bg-emerald-100 text-emerald-800',
+      'ASIGNADA': 'bg-purple-100 text-purple-800'
     };
     return statusColors[status] || 'bg-slate-100 text-slate-800';
   };
@@ -290,7 +214,8 @@ export function Dashboard() {
       'APROBADO': <CheckCircle className="h-4 w-4" />,
       'PUBLICADO': <Star className="h-4 w-4" />,
       'EN_PROCESO': <Activity className="h-4 w-4" />,
-      'COMPLETADA': <CheckCircle className="h-4 w-4" />
+      'COMPLETADA': <CheckCircle className="h-4 w-4" />,
+      'ASIGNADA': <Eye className="h-4 w-4" />
     };
     return statusIcons[status] || <FileText className="h-4 w-4" />;
   };
@@ -304,7 +229,10 @@ export function Dashboard() {
       'info': <Info className="h-4 w-4" />,
       'success': <CheckCircle className="h-4 w-4" />,
       'warning': <AlertTriangle className="h-4 w-4" />,
-      'error': <AlertCircle className="h-4 w-4" />
+      'error': <AlertCircle className="h-4 w-4" />,
+      'REVISION_ASIGNADA': <Eye className="h-4 w-4" />,
+      'PUBLICACION_ENVIADA': <FileText className="h-4 w-4" />,
+      'NUEVA_PUBLICACION': <Plus className="h-4 w-4" />
     };
     return icons[type as keyof typeof icons] || <Info className="h-4 w-4" />;
   };
@@ -314,34 +242,54 @@ export function Dashboard() {
       'info': 'text-blue-600 bg-blue-50',
       'success': 'text-green-600 bg-green-50',
       'warning': 'text-yellow-600 bg-yellow-50',
-      'error': 'text-red-600 bg-red-50'
+      'error': 'text-red-600 bg-red-50',
+      'REVISION_ASIGNADA': 'text-purple-600 bg-purple-50',
+      'PUBLICACION_ENVIADA': 'text-blue-600 bg-blue-50',
+      'NUEVA_PUBLICACION': 'text-green-600 bg-green-50'
     };
     return colors[type as keyof typeof colors] || 'text-blue-600 bg-blue-50';
   };
 
-  const getTimelineIcon = (iconName: string) => {
-    const icons: { [key: string]: React.ReactNode } = {
-      'FileText': <FileText className="h-4 w-4" />,
-      'CheckCircle': <CheckCircle className="h-4 w-4" />,
-      'Star': <Star className="h-4 w-4" />,
-      'MessageSquare': <MessageSquare className="h-4 w-4" />,
-      'Eye': <Eye className="h-4 w-4" />,
-      'Download': <Download className="h-4 w-4" />,
-      'Share2': <Share2 className="h-4 w-4" />
-    };
-    return icons[iconName] || <Activity className="h-4 w-4" />;
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
-  const getTimelineColor = (color: string) => {
-    const colors: { [key: string]: string } = {
-      'blue': 'bg-blue-500',
-      'green': 'bg-green-500',
-      'purple': 'bg-purple-500',
-      'orange': 'bg-orange-500',
-      'red': 'bg-red-500',
-      'yellow': 'bg-yellow-500'
-    };
-    return colors[color] || 'bg-gray-500';
+  const getRecentPublications = () => {
+    return publications
+      .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
+      .slice(0, 4);
+  };
+
+  const getRecentReviews = () => {
+    return reviews
+      .sort((a, b) => new Date(b.fechaAsignacion).getTime() - new Date(a.fechaAsignacion).getTime())
+      .slice(0, 3);
+  };
+
+  const getRecentNotifications = () => {
+    return notifications
+      .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
+      .slice(0, 3);
+  };
+
+  const getPublicationsByStatus = () => {
+    const statusCounts: { [key: string]: number } = {};
+    publications.forEach(pub => {
+      statusCounts[pub.estado] = (statusCounts[pub.estado] || 0) + 1;
+    });
+    return Object.entries(statusCounts).map(([status, count]) => ({ status, count }));
+  };
+
+  const getPublicationsByType = () => {
+    const typeCounts: { [key: string]: number } = {};
+    publications.forEach(pub => {
+      typeCounts[pub.tipo] = (typeCounts[pub.tipo] || 0) + 1;
+    });
+    return Object.entries(typeCounts).map(([type, count]) => ({ type, count }));
   };
 
   if (loading) {
@@ -361,19 +309,72 @@ export function Dashboard() {
   if (!stats) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-md">
           <AlertCircle className="mx-auto h-16 w-16 text-red-400 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Error al cargar el dashboard</h3>
-          <p className="text-gray-500">
-            No se pudieron cargar las estadísticas del dashboard.
+          <p className="text-gray-500 mb-4">
+            {error || 'No se pudieron cargar las estadísticas del dashboard.'}
           </p>
+          {error.includes('servidor') && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-sm text-yellow-800 font-medium mb-2">Para solucionar este problema:</p>
+              <ul className="text-sm text-yellow-700 space-y-1">
+                <li>• Verifique que el servidor mock esté corriendo</li>
+                <li>• Ejecute: <code className="bg-yellow-100 px-1 rounded">node mock-server.js</code></li>
+                <li>• Recargue la página</li>
+              </ul>
+            </div>
+          )}
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Reintentar
+          </button>
         </div>
       </div>
     );
   }
 
+  const recentPublications = getRecentPublications();
+  const recentReviews = getRecentReviews();
+  const recentNotifications = getRecentNotifications();
+  const publicationsByStatus = getPublicationsByStatus();
+  const publicationsByType = getPublicationsByType();
+
   return (
     <div className="p-6 lg:p-8">
+      {/* Error Banner */}
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-red-400 mr-3 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-red-800">Error en el dashboard</h3>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+              {error.includes('mock') && (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-xs text-yellow-800 font-medium mb-2">Para solucionar:</p>
+                  <ol className="text-xs text-yellow-700 space-y-1">
+                    <li>1. Abra una nueva terminal</li>
+                    <li>2. Navegue al directorio del proyecto</li>
+                    <li>3. Ejecute: <code className="bg-yellow-100 px-1 rounded">node mock-server.js</code></li>
+                    <li>4. Espere el mensaje "Mock server running on http://localhost:8080"</li>
+                    <li>5. Recargue esta página</li>
+                  </ol>
+                </div>
+              )}
+            </div>
+            <button 
+              onClick={() => setError('')} 
+              className="text-red-400 hover:text-red-600 ml-3"
+            >
+              <XCircle className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Welcome Header with Enhanced Design */}
       <div className="mb-8">
         <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl p-8 text-white shadow-2xl">
@@ -408,7 +409,7 @@ export function Dashboard() {
             </div>
             <div className="hidden lg:block">
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.myPublications}</div>
+                <div className="text-3xl font-bold">{stats.totalPublications}</div>
                 <div className="text-indigo-100">Publicaciones</div>
               </div>
             </div>
@@ -422,10 +423,10 @@ export function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 mb-2">Mis Publicaciones</p>
-              <p className="text-3xl font-bold text-gray-900 mb-1">{stats.myPublications}</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">{stats.totalPublications}</p>
               <p className="text-xs text-gray-500 flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1 text-green-500" />
-                +2 esta semana
+                {stats.publishedPublications} publicadas
               </p>
             </div>
             <div className="h-16 w-16 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -457,7 +458,7 @@ export function Dashboard() {
               <p className="text-3xl font-bold text-emerald-600 mb-1">{stats.completedReviews}</p>
               <p className="text-xs text-gray-500 flex items-center">
                 <Award className="w-3 h-3 mr-1 text-emerald-500" />
-                +1 esta semana
+                Total: {stats.totalReviews}
               </p>
             </div>
             <div className="h-16 w-16 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -469,15 +470,15 @@ export function Dashboard() {
         <div className="card p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group cursor-pointer">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-2">Actividad Reciente</p>
-              <p className="text-3xl font-bold text-purple-600 mb-1">{stats.recentActivity}</p>
+              <p className="text-sm font-medium text-gray-600 mb-2">Notificaciones</p>
+              <p className="text-3xl font-bold text-purple-600 mb-1">{stats.unreadNotifications}</p>
               <p className="text-xs text-gray-500 flex items-center">
                 <Zap className="w-3 h-3 mr-1 text-purple-500" />
-                +5 esta semana
+                {stats.totalNotifications} total
               </p>
             </div>
             <div className="h-16 w-16 bg-gradient-to-br from-purple-500 via-pink-500 to-rose-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-              <Activity className="h-8 w-8 text-white" />
+              <Bell className="h-8 w-8 text-white" />
             </div>
           </div>
         </div>
@@ -521,7 +522,7 @@ export function Dashboard() {
               </div>
             </div>
             <div className="p-6">
-              {stats.recentPublications.length === 0 ? (
+              {recentPublications.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl flex items-center justify-center mx-auto mb-6">
                     <FileText className="h-10 w-10 text-gray-400" />
@@ -540,42 +541,26 @@ export function Dashboard() {
                 </div>
               ) : (
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-4'}>
-                  {stats.recentPublications.map((publication) => (
+                  {recentPublications.map((publication) => (
                     <div key={publication.id} className={`${viewMode === 'grid' ? 'card p-4' : 'flex items-center justify-between p-4 bg-white/50 rounded-xl border border-gray-100'} hover:bg-white/80 transition-all duration-200 hover:shadow-md group`}>
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-2">
-                          {getTypeIcon(publication.type)}
-                          <span className="text-sm text-gray-500">{publication.type}</span>
+                          {getTypeIcon(publication.tipo)}
+                          <span className="text-sm text-gray-500">{publication.tipo}</span>
                         </div>
                         <div className="flex-1">
                           <h3 className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                            {publication.title}
+                            {publication.titulo}
                           </h3>
                           <p className="text-xs text-gray-500">
-                            {publication.date}
+                            {formatDate(publication.fechaCreacion)}
                           </p>
-                          {viewMode === 'grid' && publication.views && (
-                            <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-                              <span className="flex items-center space-x-1">
-                                <Eye className="w-3 h-3" />
-                                <span>{publication.views}</span>
-                              </span>
-                              <span className="flex items-center space-x-1">
-                                <Download className="w-3 h-3" />
-                                <span>{publication.downloads}</span>
-                              </span>
-                              <span className="flex items-center space-x-1">
-                                <Heart className="w-3 h-3" />
-                                <span>{publication.likes}</span>
-                              </span>
-                            </div>
-                          )}
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(publication.status)}`}>
-                          {getStatusIcon(publication.status)}
-                          <span className="ml-1">{publication.status.replace('_', ' ')}</span>
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(publication.estado)}`}>
+                          {getStatusIcon(publication.estado)}
+                          <span className="ml-1">{publication.estado.replace('_', ' ')}</span>
                         </span>
                         {viewMode === 'list' && (
                           <div className="flex items-center space-x-1">
@@ -599,18 +584,27 @@ export function Dashboard() {
               Actividad Reciente
             </h3>
             <div className="space-y-4">
-              {stats.activityTimeline.map((activity, index) => (
-                <div key={activity.id} className="flex items-start space-x-4">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getTimelineColor(activity.color)} text-white text-xs font-medium`}>
-                    {getTimelineIcon(activity.icon)}
+              {recentNotifications.length > 0 ? (
+                recentNotifications.map((notification) => (
+                  <div key={notification.id} className="flex items-start space-x-4">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-500 text-white text-xs font-medium">
+                      {getNotificationIcon(notification.tipo)}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">{notification.titulo}</p>
+                      <p className="text-xs text-gray-500">{notification.mensaje}</p>
+                      <p className="text-xs text-gray-400 mt-1">{formatDate(notification.fechaCreacion)}</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                    <p className="text-xs text-gray-500">{activity.description}</p>
-                    <p className="text-xs text-gray-400 mt-1">{new Date(activity.date).toLocaleDateString()}</p>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Activity className="h-8 w-8 text-gray-400" />
                   </div>
+                  <p className="text-sm text-gray-500">No hay actividad reciente</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -663,51 +657,51 @@ export function Dashboard() {
           </div>
 
           {/* Enhanced Publications by Status */}
-          <div className="card p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <BarChart3 className="w-5 h-5 mr-2 text-indigo-500" />
-              Publicaciones por Estado
-            </h3>
-            <div className="space-y-4">
-              {stats.publicationsByStatus.map((item) => (
-                <div key={item.status} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">{item.status.replace('_', ' ')}</span>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(item.count / stats.totalPublications) * 100}%` }}
-                      />
+          {publicationsByStatus.length > 0 && (
+            <div className="card p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2 text-indigo-500" />
+                Publicaciones por Estado
+              </h3>
+              <div className="space-y-4">
+                {publicationsByStatus.map((item) => (
+                  <div key={item.status} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">{item.status.replace('_', ' ')}</span>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-24 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${(item.count / stats.totalPublications) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900">{item.count}</span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900">{item.count}</span>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Recent Reviews */}
-          {stats.recentReviews.length > 0 && (
+          {recentReviews.length > 0 && (
             <div className="card p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <Eye className="w-5 h-5 mr-2 text-amber-500" />
                 Revisiones Recientes
               </h3>
               <div className="space-y-3">
-                {stats.recentReviews.map((review) => (
+                {recentReviews.map((review) => (
                   <div key={review.id} className="flex items-center justify-between p-3 bg-white/50 rounded-xl border border-gray-100 hover:bg-white/80 transition-all duration-200">
                     <div>
                       <h4 className="text-sm font-semibold text-gray-900">
-                        {review.publicationTitle}
+                        {review.publicacionTitulo}
                       </h4>
-                      <p className="text-xs text-gray-500">{review.date}</p>
-                      {review.reviewer && (
-                        <p className="text-xs text-gray-400">{review.reviewer}</p>
-                      )}
+                      <p className="text-xs text-gray-500">{formatDate(review.fechaAsignacion)}</p>
+                      <p className="text-xs text-gray-400">{review.revisor}</p>
                     </div>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(review.status)}`}>
-                      {getStatusIcon(review.status)}
-                      <span className="ml-1">{review.status.replace('_', ' ')}</span>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(review.estado)}`}>
+                      {getStatusIcon(review.estado)}
+                      <span className="ml-1">{review.estado.replace('_', ' ')}</span>
                     </span>
                   </div>
                 ))}
@@ -722,20 +716,29 @@ export function Dashboard() {
               Notificaciones
             </h3>
             <div className="space-y-3">
-              {stats.notifications.map((notification) => (
-                <div key={notification.id} className={`p-3 rounded-xl border ${getNotificationColor(notification.type)} ${!notification.read ? 'ring-2 ring-blue-200' : ''}`}>
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 mt-0.5">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-sm font-medium">{notification.title}</h4>
-                      <p className="text-xs mt-1">{notification.message}</p>
-                      <p className="text-xs mt-2 opacity-75">{new Date(notification.date).toLocaleDateString()}</p>
+              {recentNotifications.length > 0 ? (
+                recentNotifications.map((notification) => (
+                  <div key={notification.id} className={`p-3 rounded-xl border ${getNotificationColor(notification.tipo)} ${!notification.leida ? 'ring-2 ring-blue-200' : ''}`}>
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        {getNotificationIcon(notification.tipo)}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-medium">{notification.titulo}</h4>
+                        <p className="text-xs mt-1">{notification.mensaje}</p>
+                        <p className="text-xs mt-2 opacity-75">{formatDate(notification.fechaCreacion)}</p>
+                      </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <Bell className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <p className="text-sm text-gray-500">No hay notificaciones</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

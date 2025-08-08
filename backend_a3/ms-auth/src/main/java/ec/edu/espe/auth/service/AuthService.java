@@ -22,20 +22,21 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class AuthService implements UserDetailsService {
+public class AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final UserDetailsService userDetailsService;
 
     public LoginResponse login(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
 
-        UserDetails userDetails = loadUserByUsername(request.getUsername());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
         String accessToken = jwtService.generateToken(userDetails);
         String refreshToken = jwtService.generateRefreshToken(userDetails);
 
@@ -57,8 +58,11 @@ public class AuthService implements UserDetailsService {
         Set<Role> roles = new HashSet<>();
         if (request.getRoles() != null && !request.getRoles().isEmpty()) {
             roles = request.getRoles().stream()
-                    .map(roleName -> roleRepository.findByName(roleName)
-                            .orElseThrow(() -> new RuntimeException("Role not found: " + roleName)))
+                    .map(roleName -> {
+                        String normalizedRoleName = normalizeRoleName(roleName);
+                        return roleRepository.findByName(normalizedRoleName)
+                                .orElseThrow(() -> new RuntimeException("Role not found: " + normalizedRoleName));
+                    })
                     .collect(Collectors.toSet());
         } else {
             // Asignar rol por defecto
@@ -75,7 +79,7 @@ public class AuthService implements UserDetailsService {
 
         userRepository.save(user);
 
-        UserDetails userDetails = loadUserByUsername(user.getUsername());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
         String accessToken = jwtService.generateToken(userDetails);
         String refreshToken = jwtService.generateRefreshToken(userDetails);
 
@@ -92,7 +96,7 @@ public class AuthService implements UserDetailsService {
     public LoginResponse refreshToken(String refreshToken) {
         String token = refreshToken.replace("Bearer ", "");
         String username = jwtService.extractUsername(token);
-        UserDetails userDetails = loadUserByUsername(username);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
         if (jwtService.validateToken(token, userDetails)) {
             String newAccessToken = jwtService.generateToken(userDetails);
@@ -115,24 +119,43 @@ public class AuthService implements UserDetailsService {
         try {
             String jwt = token.replace("Bearer ", "");
             String username = jwtService.extractUsername(jwt);
-            UserDetails userDetails = loadUserByUsername(username);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
             return jwtService.validateToken(jwt, userDetails);
         } catch (Exception e) {
             return false;
         }
     }
 
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
-
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .authorities(user.getRoles().stream()
-                        .map(Role::getName)
-                        .toArray(String[]::new))
-                .build();
+    /**
+     * Normaliza el nombre del rol agregando el prefijo ROLE_ si no lo tiene
+     */
+    private String normalizeRoleName(String roleName) {
+        if (roleName == null || roleName.trim().isEmpty()) {
+            return Role.ROLE_LECTOR;
+        }
+        
+        String normalized = roleName.trim().toUpperCase();
+        
+        // Si ya tiene el prefijo ROLE_, devolverlo tal como está
+        if (normalized.startsWith("ROLE_")) {
+            return normalized;
+        }
+        
+        // Mapear nombres comunes a roles completos
+        switch (normalized) {
+            case "ADMIN":
+                return Role.ROLE_ADMIN;
+            case "AUTOR":
+                return Role.ROLE_AUTOR;
+            case "REVISOR":
+                return Role.ROLE_REVISOR;
+            case "EDITOR":
+                return Role.ROLE_EDITOR;
+            case "LECTOR":
+                return Role.ROLE_LECTOR;
+            default:
+                // Si no es un nombre conocido, agregar ROLE_ y convertir a mayúsculas
+                return "ROLE_" + normalized;
+        }
     }
 }

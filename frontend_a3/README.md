@@ -1,315 +1,240 @@
 # Sistema de Gestión de Publicaciones Académicas
 
-## Descripción
+Sistema integral para la gestión de publicaciones académicas con persistencia de datos dinámica y sistema de respaldo automático.
 
-Este es el frontend del Sistema de Gestión de Publicaciones Académicas, una plataforma integral para la gestión del ciclo de vida completo de publicaciones académicas y editoriales. El sistema permite el registro y autenticación segura de usuarios, creación y edición de publicaciones, flujo de revisión colaborativa, control de cambios, aprobación editorial y publicación final en un catálogo accesible.
+## 🚀 Inicio Rápido
 
-## Características Principales
-
-### 🔐 Autenticación y Autorización
-- Sistema de autenticación basado en JWT
-- Roles de usuario: Autor, Revisor, Editor, Administrador, Lector
-- Registro seguro de usuarios con validaciones
-- Gestión de sesiones y tokens de acceso
-
-### 📚 Gestión de Publicaciones
-- Creación de artículos y libros
-- Control de versiones y estados
-- Metadatos completos (ISBN, DOI, categorías, etc.)
-- Gestión de archivos adjuntos
-- Palabras clave y referencias bibliográficas
-
-### 👥 Sistema de Roles
-- **Autor**: Crear y gestionar publicaciones propias
-- **Revisor**: Evaluar publicaciones asignadas
-- **Editor**: Aprobar publicaciones y asignar revisores
-- **Administrador**: Gestión completa del sistema
-- **Lector**: Acceso al catálogo público
-
-### 🔄 Flujo de Revisión
-- Estados: Borrador → En Revisión → Cambios Solicitados → Aprobado → Publicado
-- Comentarios estructurados por secciones
-- Historial de cambios y versiones
-- Notificaciones automáticas
-
-### 📢 Sistema de Notificaciones
-- Notificaciones en tiempo real
-- Múltiples canales (email, web push, in-app)
-- Preferencias personalizables
-- Plantillas configurables
-
-### 🎯 Catálogo Público
-- Búsqueda avanzada por múltiples criterios
-- Filtros por tipo, categoría, autor
-- Vista detallada de publicaciones
-- Descarga de contenido aprobado
-
-## Tecnologías Utilizadas
-
-- **Framework**: Next.js 15 con App Router
-- **Lenguaje**: TypeScript
-- **Estilos**: Tailwind CSS
-- **Iconos**: Lucide React
-- **Estado**: React Context API
-- **Autenticación**: JWT con refresh tokens
-
-## Estructura del Proyecto
-
-```
-src/
-├── app/                    # Páginas de la aplicación
-│   ├── auth/              # Autenticación
-│   ├── dashboard/         # Panel principal
-│   ├── publications/      # Gestión de publicaciones
-│   ├── reviews/           # Sistema de revisiones
-│   ├── catalog/           # Catálogo público
-│   ├── notifications/     # Centro de notificaciones
-│   └── admin/             # Panel de administración
-├── components/            # Componentes reutilizables
-├── contexts/             # Contextos de React
-├── services/             # Servicios de API
-├── types/                # Definiciones de TypeScript
-└── utils/                # Utilidades
+### Opción 1: Script Automático (Recomendado)
+```powershell
+# En PowerShell, ejecute:
+.\start-dev.ps1
 ```
 
-## Instalación y Configuración
+### Opción 2: Inicio Manual
 
-### Prerrequisitos
-- Node.js 18+ 
+#### 1. Iniciar Servidor Mock
+```bash
+# Terminal 1 - Servidor Mock
+node mock-server.js
+```
+
+#### 2. Iniciar Frontend
+```bash
+# Terminal 2 - Frontend
+npm run dev
+```
+
+## 📋 Requisitos
+
+- Node.js 16+
 - npm o yarn
 
-### Instalación
+## 🔧 Instalación
 
-1. Clonar el repositorio:
-```bash
-git clone <repository-url>
-cd frontend_a3
-```
-
-2. Instalar dependencias:
 ```bash
 npm install
 ```
 
-3. Instalar dependencias del servidor mock (opcional, para desarrollo):
-```bash
-npm install --legacy-peer-deps express cors jsonwebtoken
-```
+## 🌐 URLs de Acceso
 
-### Desarrollo Rápido
+- **Frontend**: http://localhost:3000
+- **Servidor Mock**: http://localhost:8080
 
-Para desarrollo y pruebas, hemos incluido un servidor mock que simula la API del backend:
+## 👤 Credenciales de Prueba
 
-#### Opción 1: Usar los scripts automáticos
-```bash
-# En Windows (PowerShell)
-.\start-dev.ps1
+| Usuario | Contraseña | Rol |
+|---------|------------|-----|
+| autor | password | Autor |
+| revisor | password | Revisor |
+| editor | password | Editor |
+| admin | password | Administrador |
+| lector | password | Lector |
 
-# En Windows (Command Prompt)
-start-dev.bat
-```
+## 🗄️ Persistencia de Datos
 
-#### Opción 2: Iniciar manualmente
+### Archivos de Datos
+- **Usuarios**: `data/users.json`
+- **Publicaciones**: `data/publications.json`
+- **Revisiones**: `data/reviews.json`
+- **Notificaciones**: `data/notifications.json`
+- **Respaldos**: `data/backups/`
 
-1. **Iniciar el servidor mock** (en una terminal):
-```bash
-node mock-server.js
-```
+### Sistema de Respaldos
+- **Automático**: Cada 10 operaciones
+- **Manual**: Desde el panel de administración
+- **Restauración**: Desde respaldos guardados
+- **Limpieza**: Eliminación automática de respaldos antiguos
 
-2. **Iniciar el frontend** (en otra terminal):
-```bash
-npm run dev
-```
-
-### Configuración de Variables de Entorno
-
-El proyecto está configurado para usar el servidor mock por defecto. Si quieres conectar con el backend real:
-
-1. Crear archivo `.env.local`:
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8080
-```
-NEXT_PUBLIC_API_URL=http://localhost:8080
-```
-
-4. Ejecutar en modo desarrollo:
-```bash
-npm run dev
-```
-
-El proyecto estará disponible en `http://localhost:3000`
-
-## Scripts Disponibles
-
-- `npm run dev` - Ejecutar en modo desarrollo
-- `npm run build` - Construir para producción
-- `npm run start` - Ejecutar en modo producción
-- `npm run lint` - Ejecutar linter
-
-## Credenciales de Prueba
-
-Para probar el sistema, puedes usar las siguientes credenciales:
-
-- **Autor**: `autor` / `password`
-- **Revisor**: `revisor` / `password`
-- **Editor**: `editor` / `password`
-- **Administrador**: `admin` / `password`
-- **Lector**: `lector` / `password`
-
-## Servidor Mock para Desarrollo
-
-Para facilitar el desarrollo y pruebas, incluimos un servidor mock que simula la API del backend:
-
-### Características del Mock Server
-- ✅ Autenticación JWT completa
-- ✅ Gestión de usuarios y roles
-- ✅ Endpoints de publicaciones
-- ✅ Sistema de revisiones
-- ✅ Notificaciones
-- ✅ Datos de prueba predefinidos
-
-### Endpoints Disponibles
-- `POST /api/auth/login` - Autenticación
-- `POST /api/auth/register` - Registro
-- `GET /api/auth/me` - Información del usuario
-- `GET /api/publicaciones` - Lista de publicaciones
-- `GET /api/publicaciones/mis-publicaciones` - Publicaciones del usuario
-- `GET /api/reviews/mis-reviews` - Revisiones asignadas
-- `GET /api/notificaciones/mis-notificaciones` - Notificaciones del usuario
-
-### Iniciar el Mock Server
-```bash
-node mock-server.js
-```
-
-El servidor estará disponible en `http://localhost:8080`
-
-## Funcionalidades por Rol
-
-### Autor
-- Crear y editar publicaciones
-- Ver estado de revisiones
-- Responder a comentarios
-- Subir archivos adjuntos
-
-### Revisor
-- Ver publicaciones asignadas
-- Comentar y evaluar
-- Emitir recomendaciones
-- Historial de revisiones
-
-### Editor
-- Aprobar/rechazar publicaciones
-- Asignar revisores
-- Gestionar flujo editorial
-- Estadísticas de revisión
-
-### Administrador
-- Gestión de usuarios
-- Asignación de roles
-- Configuración del sistema
-- Monitoreo y reportes
-
-### Lector
-- Buscar en catálogo
-- Ver publicaciones aprobadas
-- Descargar contenido
-- Filtros avanzados
-
-## API Endpoints
-
-El frontend se conecta a los siguientes endpoints del backend:
+## 🔌 Endpoints API
 
 ### Autenticación
 - `POST /api/auth/login` - Iniciar sesión
-- `POST /api/auth/register` - Registrar usuario
-- `POST /api/auth/refresh` - Renovar token
-- `POST /api/auth/logout` - Cerrar sesión
+- `POST /api/auth/register` - Registro de usuario
+- `GET /api/auth/me` - Información del usuario actual
 
 ### Publicaciones
-- `GET /api/publications` - Listar publicaciones
-- `POST /api/publications` - Crear publicación
-- `GET /api/publications/{id}` - Obtener publicación
-- `PUT /api/publications/{id}` - Actualizar publicación
-- `DELETE /api/publications/{id}` - Eliminar publicación
+- `GET /api/publicaciones` - Listar publicaciones
+- `POST /api/publicaciones` - Crear publicación
+- `PUT /api/publicaciones/:id` - Actualizar publicación
+- `DELETE /api/publicaciones/:id` - Eliminar publicación
+- `GET /api/publicaciones/mis-publicaciones` - Mis publicaciones
 
 ### Revisiones
-- `GET /api/reviews` - Listar revisiones
+- `GET /api/reviews/mis-reviews` - Mis revisiones
 - `POST /api/reviews` - Crear revisión
-- `PUT /api/reviews/{id}` - Actualizar revisión
-- `POST /api/reviews/{id}/submit` - Enviar revisión
+- `PUT /api/reviews/:id` - Actualizar revisión
 
 ### Notificaciones
-- `GET /api/notifications` - Listar notificaciones
-- `POST /api/notifications/{id}/read` - Marcar como leída
-- `GET /api/notifications/unread-count` - Contar no leídas
+- `GET /api/notificaciones/mis-notificaciones` - Mis notificaciones
+- `PUT /api/notificaciones/:id/leer` - Marcar como leída
 
-## Desarrollo
+### Dashboard
+- `GET /api/dashboard/stats` - Estadísticas del dashboard
 
-### Estructura de Componentes
+### Administración
+- `GET /api/admin/users` - Gestión de usuarios
+- `POST /api/admin/backup` - Crear respaldo
+- `GET /api/admin/backups` - Listar respaldos
+- `POST /api/admin/backup/restore/:name` - Restaurar respaldo
+- `DELETE /api/admin/backup/:name` - Eliminar respaldo
+- `POST /api/admin/export` - Exportar datos
+- `POST /api/admin/import` - Importar datos
+- `GET /api/admin/stats` - Estadísticas del sistema
+- `POST /api/admin/backup/clean` - Limpiar respaldos antiguos
 
-Los componentes están organizados por funcionalidad:
+## 🎯 Características Principales
 
-- **Auth**: Componentes de autenticación
-- **Dashboard**: Panel principal y navegación
-- **Publications**: Gestión de publicaciones
-- **Reviews**: Sistema de revisiones
-- **Notifications**: Centro de notificaciones
-- **Admin**: Panel de administración
+### 📊 Dashboard Dinámico
+- Estadísticas en tiempo real
+- Gráficos de actividad
+- Resumen de publicaciones y revisiones
+- Notificaciones recientes
 
-### Patrones Utilizados
+### 📝 Gestión de Publicaciones
+- Creación y edición de publicaciones
+- Estados de publicación (Borrador, En Revisión, Publicado)
+- Sistema de palabras clave
+- Metadatos completos
 
-- **Context API**: Para estado global de autenticación
-- **Custom Hooks**: Para lógica reutilizable
-- **Service Layer**: Para comunicación con API
-- **TypeScript**: Para tipado estático
-- **Responsive Design**: Con Tailwind CSS
+### 📚 Catálogo Dinámico
+- Visualización de todas las publicaciones del sistema
+- Búsqueda avanzada por título, autor y palabras clave
+- Filtros por categoría y tipo de publicación
+- Ordenamiento por fecha y título
+- Paginación de resultados
+- Datos obtenidos dinámicamente del backup
 
-### Convenciones de Código
+### 👥 Sistema de Usuarios
+- Roles diferenciados (Autor, Revisor, Editor, Admin, Lector)
+- Gestión de permisos
+- Perfiles de usuario
 
-- Nombres de archivos en kebab-case
-- Componentes en PascalCase
-- Hooks personalizados con prefijo `use`
-- Servicios con sufijo `Service`
-- Tipos con sufijo descriptivo
+### 🔍 Sistema de Revisiones
+- Asignación de revisores
+- Estados de revisión
+- Comentarios y feedback
+- Sistema de prioridades
 
-## Despliegue
+### 🔔 Sistema de Notificaciones
+- Notificaciones en tiempo real
+- Configuración de preferencias
+- Diferentes tipos de notificación
 
-### Producción
+### 💾 Sistema de Respaldos
+- Respaldos automáticos
+- Respaldos manuales
+- Restauración de datos
+- Exportación/Importación
 
-1. Construir el proyecto:
-```bash
-npm run build
+## 🛠️ Solución de Problemas
+
+### Error 404 en Dashboard
+Si aparece "Error loading stats: 404 Not Found":
+
+1. **Verificar que el servidor mock esté corriendo**:
+   ```bash
+   node mock-server.js
+   ```
+
+2. **Verificar que aparezca el mensaje**:
+   ```
+   Mock server running on http://localhost:8080
+   ```
+
+3. **Recargar la página del dashboard**
+
+### Error de Autenticación
+Si aparece "Error de autenticación":
+
+1. **Cerrar sesión y volver a iniciar**
+2. **Verificar credenciales de prueba**
+3. **Limpiar localStorage del navegador**
+
+### Error de Conectividad
+Si no se pueden cargar los datos:
+
+1. **Verificar que ambos servidores estén corriendo**
+2. **Verificar puertos 3000 y 8080**
+3. **Revisar consola del navegador para errores**
+
+## 📁 Estructura del Proyecto
+
+```
+frontend_a3/
+├── src/
+│   ├── app/                 # Páginas Next.js
+│   ├── components/          # Componentes React
+│   ├── contexts/           # Contextos de React
+│   ├── services/           # Servicios de API
+│   └── types/              # Tipos TypeScript
+├── data/                   # Datos persistentes
+│   ├── users.json
+│   ├── publications.json
+│   ├── reviews.json
+│   ├── notifications.json
+│   └── backups/
+├── mock-server.js          # Servidor mock
+├── start-dev.ps1          # Script de inicio
+└── README.md
 ```
 
-2. Ejecutar en producción:
-```bash
-npm start
-```
+## 🔄 Scripts Disponibles
 
-### Variables de Entorno de Producción
+- `.\start-dev.ps1` - Inicia todo el entorno de desarrollo
+- `.\start-mock-server.ps1` - Solo inicia el servidor mock
+- `npm run dev` - Solo inicia el frontend
+- `node check-server.js` - Verifica si el servidor mock está funcionando
 
-```env
-NEXT_PUBLIC_API_URL=https://api.tudominio.com
-NEXT_PUBLIC_WS_URL=wss://api.tudominio.com
-```
+## 📈 Características Avanzadas
 
-## Contribución
+### Panel de Administración
+- Gestión completa de usuarios
+- Sistema de respaldos
+- Estadísticas del sistema
+- Monitoreo de salud
+
+### Sistema de Roles
+- **Autor**: Crear y gestionar publicaciones
+- **Revisor**: Revisar publicaciones asignadas
+- **Editor**: Gestionar el proceso editorial
+- **Admin**: Acceso completo al sistema
+- **Lector**: Acceso de solo lectura
+
+### Persistencia de Datos
+- Almacenamiento en JSON
+- Respaldos automáticos
+- Restauración de datos
+- Exportación/Importación
+
+## 🤝 Contribución
 
 1. Fork el proyecto
-2. Crear una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
+2. Crear una rama para tu feature
+3. Commit tus cambios
+4. Push a la rama
 5. Abrir un Pull Request
 
-## Licencia
+## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+Este proyecto está bajo la Licencia MIT.
 
-## Soporte
-
-Para soporte técnico o preguntas sobre el proyecto, contacta al equipo de desarrollo.
-
----
-
-**Nota**: Este frontend está diseñado para trabajar con un backend de microservicios que implementa la arquitectura descrita en el documento de especificaciones del proyecto.

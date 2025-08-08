@@ -10,6 +10,6 @@ public class RabbitMqConfig {
 
     @Bean
     public Queue notificacionesQueue(){
-        return QueueBuilder.durable("queue.notificaciones").build();
+        return QueueBuilder.durable("notifications.activity").build();
     }
 }

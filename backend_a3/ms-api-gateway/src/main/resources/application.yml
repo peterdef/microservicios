@@ -52,6 +52,15 @@ spring:
                   args:
                     name: catalogo-circuit-breaker
                     fallbackUri: forward:/fallback/catalogo
+            - id: auth-service
+              uri: lb://ms-auth
+              predicates:
+                - Path=/auth/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: auth-circuit-breaker
+                    fallbackUri: forward:/fallback/auth
 
 # Resilience4j configuration
 resilience4j:
@@ -74,6 +83,14 @@ resilience4j:
         failureRateThreshold: 50
         eventConsumerBufferSize: 10
       catalogo-circuit-breaker:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+      auth-circuit-breaker:
         slidingWindowSize: 10
         minimumNumberOfCalls: 5
         permittedNumberOfCallsInHalfOpenState: 3

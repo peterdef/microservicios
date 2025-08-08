@@ -18,3 +18,4 @@ public class UserInfo {
     private String orcid;
     private String biografia;
 }
+

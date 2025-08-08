@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Layout } from '../../components/Layout';
 import { Publication, PublicationStatus, PublicationType } from '../../types/publication';
+import { publicationService } from '../../services/publicationService';
 import { 
   Search, 
   Filter, 
@@ -20,7 +21,8 @@ import {
   ChevronUp,
   X,
   Bookmark,
-  BookmarkPlus
+  BookmarkPlus,
+  AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -28,6 +30,7 @@ export default function CatalogPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<PublicationType | ''>('');
@@ -38,158 +41,86 @@ export default function CatalogPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [favorites, setFavorites] = useState<string[]>([]);
 
-  // Mock data for published publications
-  const mockPublications: Publication[] = [
-    {
-      id: '1',
-      titulo: 'Análisis de Algoritmos de Machine Learning',
-      resumen: 'Estudio comparativo de algoritmos de machine learning para clasificación de datos. Se analizan diferentes técnicas y su rendimiento en diversos conjuntos de datos.',
-      tipo: PublicationType.ARTICULO,
-      estado: PublicationStatus.PUBLICADO,
-      autorPrincipalId: '1',
-      versionActual: '1.0',
-      fechaCreacion: '2024-01-15T10:00:00Z',
-      fechaActualizacion: '2024-02-01T10:00:00Z',
-      palabrasClave: ['machine learning', 'algoritmos', 'clasificación', 'inteligencia artificial'],
-      referenciasBibliograficas: [
-        'Smith, J. (2023). Machine Learning Fundamentals. Journal of AI, 15(2), 45-67.',
-        'García, M. (2023). Comparative Analysis of ML Algorithms. Computer Science Review, 8(1), 23-41.'
-      ],
-      metadatos: {
-        doi: '10.1000/example.2024.001',
-        issn: '1234-5678',
-        paginas: 15,
-        categoria: 'Computer Science',
-        licencia: 'CC BY 4.0'
+  // Fetch published publications from API
+  const fetchPublications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch all publications from backup (not just published ones for now)
+      const response = await publicationService.getPublications({
+        size: 100 // Get more publications for the catalog
+      });
+      
+      console.log('API Response:', response); // Debug log
+      
+      const fetchedPublications = response.content || response;
+      console.log('Fetched Publications:', fetchedPublications); // Debug log
+      
+      setPublications(fetchedPublications);
+      setTotalPages(Math.ceil(fetchedPublications.length / 5));
+    } catch (error: any) {
+      console.error('Error fetching publications:', error);
+      
+      // Check if it's a server connectivity issue
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        setError('Servidor no disponible. Verifique que el servidor mock esté corriendo en el puerto 8080.');
+      } else if (error.message.includes('401')) {
+        setError('Error de autenticación. Por favor, inicie sesión nuevamente.');
+      } else if (error.message.includes('404')) {
+        setError('Servidor mock no disponible. Ejecute "node mock-server.js" en una nueva terminal.');
+      } else {
+        setError(error.message || 'Error al cargar las publicaciones');
       }
-    },
-    {
-      id: '5',
-      titulo: 'Ciberseguridad en la Era Digital',
-      resumen: 'Guía completa sobre seguridad informática, incluyendo amenazas, vulnerabilidades y mejores prácticas de protección.',
-      tipo: PublicationType.LIBRO,
-      estado: PublicationStatus.PUBLICADO,
-      autorPrincipalId: '2',
-      versionActual: '1.0',
-      fechaCreacion: '2024-02-05T10:00:00Z',
-      palabrasClave: ['ciberseguridad', 'seguridad informática', 'amenazas', 'protección'],
-      isbn: '978-0-987654-32-1',
-      numeroPaginas: 280,
-      edicion: '1',
-      capitulos: [
-        { numero: 1, titulo: 'Fundamentos de Ciberseguridad', resumenCapitulo: 'Conceptos básicos de seguridad' },
-        { numero: 2, titulo: 'Amenazas y Vulnerabilidades', resumenCapitulo: 'Tipos de ataques informáticos' },
-        { numero: 3, titulo: 'Protección de Datos', resumenCapitulo: 'Estrategias de protección' },
-        { numero: 4, titulo: 'Criptografía Aplicada', resumenCapitulo: 'Técnicas de encriptación' }
-      ]
-    },
-    {
-      id: '6',
-      titulo: 'Análisis de Datos con Python',
-      resumen: 'Técnicas avanzadas de análisis de datos utilizando Python, pandas, numpy y scikit-learn.',
-      tipo: PublicationType.ARTICULO,
-      estado: PublicationStatus.PUBLICADO,
-      autorPrincipalId: '3',
-      versionActual: '1.0',
-      fechaCreacion: '2024-02-10T10:00:00Z',
-      fechaActualizacion: '2024-03-01T10:00:00Z',
-      palabrasClave: ['python', 'análisis de datos', 'pandas', 'scikit-learn'],
-      referenciasBibliograficas: [
-        'McKinney, W. (2017). Python for Data Analysis. O\'Reilly Media.',
-        'Pedregosa, F. (2011). Scikit-learn: Machine Learning in Python. JMLR, 12, 2825-2830.'
-      ],
-      metadatos: {
-        doi: '10.1000/example.2024.003',
-        issn: '3456-7890',
-        paginas: 45,
-        categoria: 'Data Science',
-        licencia: 'CC BY 4.0'
-      }
-    },
-    {
-      id: '7',
-      titulo: 'Desarrollo Web Moderno con React',
-      resumen: 'Guía completa para desarrollar aplicaciones web modernas utilizando React, incluyendo hooks, context y mejores prácticas.',
-      tipo: PublicationType.ARTICULO,
-      estado: PublicationStatus.PUBLICADO,
-      autorPrincipalId: '4',
-      versionActual: '1.0',
-      fechaCreacion: '2024-02-15T10:00:00Z',
-      palabrasClave: ['react', 'desarrollo web', 'javascript', 'frontend'],
-      referenciasBibliograficas: [
-        'React Team. (2023). React Documentation. Facebook.',
-        'Kent, C. (2022). React Patterns. Manning Publications.'
-      ],
-      metadatos: {
-        doi: '10.1000/example.2024.004',
-        issn: '4567-8901',
-        paginas: 25,
-        categoria: 'Web Development',
-        licencia: 'CC BY 4.0'
-      }
-    },
-    {
-      id: '8',
-      titulo: 'Inteligencia Artificial Aplicada',
-      resumen: 'Aplicaciones prácticas de inteligencia artificial en diferentes industrias y sectores.',
-      tipo: PublicationType.LIBRO,
-      estado: PublicationStatus.PUBLICADO,
-      autorPrincipalId: '5',
-      versionActual: '1.0',
-      fechaCreacion: '2024-02-20T10:00:00Z',
-      palabrasClave: ['inteligencia artificial', 'aplicaciones', 'industria', 'automatización'],
-      isbn: '978-0-111111-11-1',
-      numeroPaginas: 320,
-      edicion: '1',
-      capitulos: [
-        { numero: 1, titulo: 'Fundamentos de IA', resumenCapitulo: 'Conceptos básicos de inteligencia artificial' },
-        { numero: 2, titulo: 'Machine Learning', resumenCapitulo: 'Algoritmos de aprendizaje automático' },
-        { numero: 3, titulo: 'Deep Learning', resumenCapitulo: 'Redes neuronales profundas' },
-        { numero: 4, titulo: 'Aplicaciones Industriales', resumenCapitulo: 'Casos de uso en la industria' }
-      ]
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      return;
-    }
+    fetchPublications();
+  }, []);
 
-    // Simulate API call delay
-    setLoading(true);
-    setTimeout(() => {
-      setPublications(mockPublications);
-      setTotalPages(Math.ceil(mockPublications.length / 5));
-      setLoading(false);
-    }, 500);
-  }, [isAuthenticated, isLoading]);
+  // Refresh publications when returning to the page
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchPublications();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
   const getTypeIcon = (type: PublicationType) => {
     return type === PublicationType.ARTICULO ? <FileText className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />;
   };
 
-  const handlePublicationAction = (action: string, publicationId: string) => {
-    console.log(`${action} publication ${publicationId}`);
-    switch (action) {
-      case 'view':
-        // Navigate to publication detail
-        console.log('Viewing publication:', publicationId);
-        break;
-      case 'download':
-        // Implement download functionality
-        console.log('Downloading publication:', publicationId);
-        break;
-      case 'share':
-        // Implement share functionality
-        console.log('Sharing publication:', publicationId);
-        break;
-      case 'favorite':
-        setFavorites(prev => 
-          prev.includes(publicationId) 
-            ? prev.filter(id => id !== publicationId)
-            : [...prev, publicationId]
-        );
-        break;
+  const handlePublicationAction = async (action: string, publicationId: string) => {
+    try {
+      switch (action) {
+        case 'view':
+          // Navigate to publication detail
+          console.log('Viewing publication:', publicationId);
+          break;
+        case 'download':
+          // Implement download functionality
+          console.log('Downloading publication:', publicationId);
+          break;
+        case 'share':
+          // Implement share functionality
+          console.log('Sharing publication:', publicationId);
+          break;
+        case 'favorite':
+          setFavorites(prev => 
+            prev.includes(publicationId) 
+              ? prev.filter(id => id !== publicationId)
+              : [...prev, publicationId]
+          );
+          break;
+      }
+    } catch (error: any) {
+      console.error(`Error in ${action} action:`, error);
+      alert(error.message || `Error al ${action} la publicación`);
     }
   };
 
@@ -249,8 +180,50 @@ export default function CatalogPage() {
   if (loading) {
     return (
       <Layout>
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+          <div className="text-center">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600 mx-auto mb-4"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-600 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+            </div>
+            <p className="text-gray-600 font-medium">Cargando catálogo...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+          <div className="text-center max-w-md">
+            <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="h-10 w-10 text-red-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error al cargar el catálogo</h3>
+            <p className="text-gray-500 mb-4">{error}</p>
+            
+            {error.includes('servidor') && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-yellow-800 font-medium mb-2">Para solucionar este problema:</p>
+                <ol className="text-sm text-yellow-700 space-y-1">
+                  <li>1. Abra una nueva terminal</li>
+                  <li>2. Navegue al directorio del proyecto</li>
+                  <li>3. Ejecute: <code className="bg-yellow-100 px-1 rounded">node mock-server.js</code></li>
+                  <li>4. Espere el mensaje "Mock server running on http://localhost:8080"</li>
+                  <li>5. Recargue esta página</li>
+                </ol>
+              </div>
+            )}
+            
+            <button
+              onClick={fetchPublications}
+              className="btn-primary inline-flex items-center px-6 py-3"
+            >
+              Reintentar
+            </button>
+          </div>
         </div>
       </Layout>
     );
@@ -326,6 +299,7 @@ export default function CatalogPage() {
                       <option value="Data Science">Data Science</option>
                       <option value="Web Development">Web Development</option>
                       <option value="Security">Security</option>
+                      <option value="Medical AI">Medical AI</option>
                     </select>
                   </div>
 
@@ -433,15 +407,15 @@ export default function CatalogPage() {
                           <span className="ml-1">{publication.tipo}</span>
                         </span>
                         <button
-                          onClick={() => handlePublicationAction('favorite', publication.id)}
+                          onClick={() => handlePublicationAction('favorite', publication.id || '')}
                           className={`p-1 rounded-full transition-colors ${
-                            favorites.includes(publication.id)
+                            favorites.includes(publication.id || '')
                               ? 'text-yellow-500 hover:text-yellow-600'
                               : 'text-gray-400 hover:text-yellow-500'
                           }`}
-                          title={favorites.includes(publication.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                          title={favorites.includes(publication.id || '') ? 'Quitar de favoritos' : 'Agregar a favoritos'}
                         >
-                          {favorites.includes(publication.id) ? <Bookmark className="h-4 w-4" /> : <BookmarkPlus className="h-4 w-4" />}
+                          {favorites.includes(publication.id || '') ? <Bookmark className="h-4 w-4" /> : <BookmarkPlus className="h-4 w-4" />}
                         </button>
                       </div>
                     </div>
@@ -455,7 +429,7 @@ export default function CatalogPage() {
                     <div className="flex items-center space-x-4 text-xs text-gray-500 mb-4">
                       <div className="flex items-center space-x-1">
                         <User className="h-3 w-3" />
-                        <span>Autor</span>
+                        <span>{publication.autor || 'Autor'}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-3 w-3" />
@@ -506,14 +480,14 @@ export default function CatalogPage() {
                     <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => handlePublicationAction('view', publication.id)}
+                          onClick={() => handlePublicationAction('view', publication.id || '')}
                           className="inline-flex items-center px-3 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
                         >
                           <Eye className="h-3 w-3 mr-1" />
                           Ver
                         </button>
                         <button
-                          onClick={() => handlePublicationAction('download', publication.id)}
+                          onClick={() => handlePublicationAction('download', publication.id || '')}
                           className="inline-flex items-center px-3 py-1 text-xs font-medium text-green-600 hover:text-green-800 hover:bg-green-50 rounded-md transition-colors"
                         >
                           <Download className="h-3 w-3 mr-1" />
@@ -521,7 +495,7 @@ export default function CatalogPage() {
                         </button>
                       </div>
                       <button
-                        onClick={() => handlePublicationAction('share', publication.id)}
+                        onClick={() => handlePublicationAction('share', publication.id || '')}
                         className="inline-flex items-center px-3 py-1 text-xs font-medium text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-md transition-colors"
                       >
                         <Share className="h-3 w-3 mr-1" />

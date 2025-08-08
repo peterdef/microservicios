@@ -54,4 +54,17 @@ public class FallbackController {
         
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
+
+    @GetMapping("/auth")
+    public ResponseEntity<Map<String, Object>> authFallback() {
+        log.warn("Circuit breaker activado para servicio de autenticación");
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", "SERVICE_UNAVAILABLE");
+        response.put("message", "El servicio de autenticación no está disponible en este momento");
+        response.put("fallback", true);
+        
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
 }

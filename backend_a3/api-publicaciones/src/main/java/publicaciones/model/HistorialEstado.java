@@ -56,3 +56,4 @@ public class HistorialEstado {
     @Column(name = "metadata", columnDefinition = "JSONB")
     private String metadata; // JSON con datos adicionales del cambio
 }
+

@@ -8,6 +8,7 @@ import lombok.Setter;
 import java.util.List;
 
 @Entity(name = "articulos")
+@DiscriminatorValue("ARTICULO")
 @Setter
 @Getter
 public class Paper extends Publicacion {

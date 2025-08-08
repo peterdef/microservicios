@@ -17,3 +17,4 @@ public interface AuthClient {
     @GetMapping("/auth/user/{userId}/roles")
     String[] getUserRoles(@PathVariable String userId, @RequestHeader("Authorization") String token);
 }
+

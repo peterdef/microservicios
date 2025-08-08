@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Layout } from '../../components/Layout';
+import { notificationService } from '../../services/notificationService';
 import { 
   Bell, 
   CheckCircle, 
@@ -18,8 +19,10 @@ import {
   Mail,
   MessageSquare,
   Calendar,
-  Tag
+  Tag,
+  Settings
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface Notification {
   id: number;
@@ -37,104 +40,55 @@ export default function NotificationsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Mock notifications data
-  const mockNotifications: Notification[] = [
-    {
-      id: 1,
-      titulo: 'Nueva revisión asignada',
-      mensaje: 'Se te ha asignado una nueva revisión: "Fundamentos de Programación Web". Por favor, revisa los detalles y completa la evaluación en los próximos 7 días.',
-      tipo: 'REVISION_ASIGNADA',
-      fecha: '2024-01-25T10:30:00Z',
-      leida: false,
-      prioridad: 'ALTA',
-      categoria: 'Revisiones',
-      accion: 'Ver revisión'
-    },
-    {
-      id: 2,
-      titulo: 'Publicación aprobada',
-      mensaje: 'Tu publicación "Análisis de Algoritmos de Machine Learning" ha sido aprobada y está ahora disponible en el catálogo público.',
-      tipo: 'PUBLICACION_APROBADA',
-      fecha: '2024-01-22T14:15:00Z',
-      leida: true,
-      prioridad: 'MEDIA',
-      categoria: 'Publicaciones',
-      accion: 'Ver publicación'
-    },
-    {
-      id: 3,
-      titulo: 'Cambios solicitados',
-      mensaje: 'Se han solicitado cambios en tu publicación "Inteligencia Artificial en Medicina". Por favor, revisa los comentarios del revisor y actualiza el documento.',
-      tipo: 'CAMBIOS_SOLICITADOS',
-      fecha: '2024-01-24T09:45:00Z',
-      leida: false,
-      prioridad: 'ALTA',
-      categoria: 'Publicaciones',
-      accion: 'Ver cambios'
-    },
-    {
-      id: 4,
-      titulo: 'Nueva citación',
-      mensaje: 'Tu publicación "Fundamentos de IA" ha sido citada en una nueva investigación. ¡Felicitaciones por el impacto de tu trabajo!',
-      tipo: 'CITACION',
-      fecha: '2024-01-20T16:20:00Z',
-      leida: true,
-      prioridad: 'BAJA',
-      categoria: 'Métricas',
-      accion: 'Ver citación'
-    },
-    {
-      id: 5,
-      titulo: 'Recordatorio de revisión',
-      mensaje: 'Tienes una revisión pendiente que vence en 2 días: "Análisis de Datos con Python". Por favor, completa la evaluación a tiempo.',
-      tipo: 'RECORDATORIO',
-      fecha: '2024-01-23T11:00:00Z',
-      leida: false,
-      prioridad: 'ALTA',
-      categoria: 'Revisiones',
-      accion: 'Completar revisión'
-    },
-    {
-      id: 6,
-      titulo: 'Nuevo comentario',
-      mensaje: 'El revisor ha agregado un nuevo comentario a tu publicación "Blockchain y Criptomonedas". Revisa los detalles para más información.',
-      tipo: 'COMENTARIO',
-      fecha: '2024-01-21T13:30:00Z',
-      leida: true,
-      prioridad: 'MEDIA',
-      categoria: 'Publicaciones',
-      accion: 'Ver comentario'
-    },
-    {
-      id: 7,
-      titulo: 'Sistema de notificaciones actualizado',
-      mensaje: 'Hemos mejorado nuestro sistema de notificaciones. Ahora puedes recibir alertas más personalizadas y gestionar mejor tus preferencias.',
-      tipo: 'SISTEMA',
-      fecha: '2024-01-19T08:00:00Z',
-      leida: true,
-      prioridad: 'BAJA',
-      categoria: 'Sistema',
-      accion: 'Configurar'
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch user notifications
+      const response = await notificationService.getMyNotifications();
+      console.log('API Response:', response); // Debug log
+      
+      const fetchedNotifications = response.content || response;
+      console.log('Fetched Notifications:', fetchedNotifications); // Debug log
+      
+      setNotifications(fetchedNotifications);
+    } catch (error: any) {
+      console.error('Error fetching notifications:', error);
+      setError(error.message || 'Error al cargar las notificaciones');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       return;
     }
 
-    // Simulate API call delay
-    setLoading(true);
-    setTimeout(() => {
-      setNotifications(mockNotifications);
-      setLoading(false);
-    }, 500);
+    if (isAuthenticated) {
+      fetchNotifications();
+    }
   }, [isAuthenticated, isLoading]);
+
+  // Refresh notifications when returning to the page
+  useEffect(() => {
+    const handleFocus = () => {
+      if (isAuthenticated) {
+        fetchNotifications();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [isAuthenticated]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -177,41 +131,50 @@ export default function NotificationsPage() {
         return <MessageSquare className="h-4 w-4" />;
       case 'SISTEMA':
         return <Bell className="h-4 w-4" />;
+      case 'NUEVA_PUBLICACION':
+        return <Mail className="h-4 w-4" />;
       default:
         return <Bell className="h-4 w-4" />;
     }
   };
 
-  const handleNotificationAction = (action: string, notificationId: number) => {
-    console.log(`${action} notification ${notificationId}`);
-    switch (action) {
-      case 'mark-read':
-        setNotifications(prev => 
-          prev.map(notif => 
-            notif.id === notificationId 
-              ? { ...notif, leida: true }
-              : notif
-          )
-        );
-        break;
-      case 'mark-unread':
-        setNotifications(prev => 
-          prev.map(notif => 
-            notif.id === notificationId 
-              ? { ...notif, leida: false }
-              : notif
-          )
-        );
-        break;
-      case 'delete':
-        if (confirm('¿Estás seguro de que quieres eliminar esta notificación?')) {
-          setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
-        }
-        break;
-      case 'action':
-        // Handle specific notification action
-        console.log('Executing notification action:', notificationId);
-        break;
+  const handleNotificationAction = async (action: string, notificationId: number) => {
+    try {
+      switch (action) {
+        case 'mark-read':
+          await notificationService.markAsRead(notificationId);
+          setNotifications(prev => 
+            prev.map(notif => 
+              notif.id === notificationId 
+                ? { ...notif, leida: true }
+                : notif
+            )
+          );
+          break;
+        case 'mark-unread':
+          await notificationService.markAsUnread(notificationId);
+          setNotifications(prev => 
+            prev.map(notif => 
+              notif.id === notificationId 
+                ? { ...notif, leida: false }
+                : notif
+            )
+          );
+          break;
+        case 'delete':
+          if (confirm('¿Estás seguro de que quieres eliminar esta notificación?')) {
+            await notificationService.deleteNotification(notificationId);
+            setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+          }
+          break;
+        case 'action':
+          // Handle specific notification action
+          console.log('Executing notification action:', notificationId);
+          break;
+      }
+    } catch (error: any) {
+      console.error(`Error in ${action} action:`, error);
+      alert(error.message || `Error al ${action} la notificación`);
     }
   };
 
@@ -228,8 +191,14 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter(n => !n.leida).length;
   const highPriorityCount = notifications.filter(n => !n.leida && n.prioridad === 'ALTA').length;
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(notif => ({ ...notif, leida: true })));
+  const markAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      setNotifications(prev => prev.map(notif => ({ ...notif, leida: true })));
+    } catch (error: any) {
+      console.error('Error marking all as read:', error);
+      alert(error.message || 'Error al marcar todas como leídas');
+    }
   };
 
   const clearFilters = () => {
@@ -241,8 +210,36 @@ export default function NotificationsPage() {
   if (loading) {
     return (
       <Layout>
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+          <div className="text-center">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600 mx-auto mb-4"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-600 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+            </div>
+            <p className="text-gray-600 font-medium">Cargando notificaciones...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="h-10 w-10 text-red-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error al cargar las notificaciones</h3>
+            <p className="text-gray-500 mb-6">{error}</p>
+            <button
+              onClick={fetchNotifications}
+              className="btn-primary inline-flex items-center px-6 py-3"
+            >
+              Reintentar
+            </button>
+          </div>
         </div>
       </Layout>
     );
@@ -296,6 +293,13 @@ export default function NotificationsPage() {
                   Marcar todas como leídas
                 </button>
               )}
+              <Link
+                href="/notifications/settings"
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Configurar
+              </Link>
             </div>
           </div>
 
@@ -353,6 +357,7 @@ export default function NotificationsPage() {
                     <option value="COMENTARIO">Comentario</option>
                     <option value="RECORDATORIO">Recordatorio</option>
                     <option value="SISTEMA">Sistema</option>
+                    <option value="NUEVA_PUBLICACION">Nueva Publicación</option>
                   </select>
                 </div>
 

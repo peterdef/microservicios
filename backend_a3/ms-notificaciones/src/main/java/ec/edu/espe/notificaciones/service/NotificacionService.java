@@ -69,6 +69,10 @@ public class NotificacionService {
         }
     }
 
+    public List<Notificacion> listarNotificaciones() {
+        return notificacionRepository.findAll();
+    }
+
     public List<Notificacion> obtenerNotificacionesPorUsuario(String userId) {
         return notificacionRepository.findByDestinatarioIdOrderByFechaCreacionDesc(userId);
     }

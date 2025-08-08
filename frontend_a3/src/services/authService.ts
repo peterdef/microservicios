@@ -115,46 +115,8 @@ class AuthService {
     return response;
   }
 
-  async validateToken(token: string): Promise<boolean> {
-    try {
-      await this.makeRequest('/api/auth/validate', {
-        method: 'POST',
-        body: JSON.stringify({ token }),
-      });
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  async logout(): Promise<void> {
-    try {
-      await this.makeRequest('/api/auth/logout', {
-        method: 'POST',
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      this.tokenUtils.clearAuth();
-    }
-  }
-
   async getCurrentUser(): Promise<any> {
     return await this.makeRequest('/api/auth/me');
-  }
-
-  async updateProfile(userData: Partial<UserRegistrationRequest>): Promise<any> {
-    return await this.makeRequest('/api/auth/profile', {
-      method: 'PUT',
-      body: JSON.stringify(userData),
-    });
-  }
-
-  async changePassword(passwordData: { currentPassword: string; newPassword: string }): Promise<void> {
-    await this.makeRequest('/api/auth/change-password', {
-      method: 'POST',
-      body: JSON.stringify(passwordData),
-    });
   }
 }
 

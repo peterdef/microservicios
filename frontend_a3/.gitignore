@@ -97,3 +97,8 @@ jspm_packages/
 
 # TernJS port file
 .tern-port
+
+# Mock server data
+data/
+*.json.bak
+

@@ -53,7 +53,8 @@ export interface BasePublication {
   versionActual: string;
   fechaCreacion?: string;
   fechaActualizacion?: string;
-  autorPrincipalId: string;
+  autorId: string;
+  autor?: string;
   coAutoresIds?: string[];
   metadatos?: PublicationMetadata;
 }
@@ -78,6 +79,9 @@ export interface PublicationFormData {
   // Metadata
   categoria?: string;
   licencia?: string;
+  // Author fields
+  autorId?: string;
+  autor?: string;
 }
 
 export interface PublicationListResponse {

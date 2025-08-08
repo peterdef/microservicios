@@ -4,13 +4,18 @@ server:
 spring:
   application:
     name: ms-auth
+  main:
+    allow-circular-references: true
   datasource:
-    #url: jdbc:postgresql://localhost:5432/auth_db
-    #username: postgres
-    #password: qwerty123
-    url: jdbc:postgresql://localhost:26257/auth_db?user=root&password=
-    username: root
-    password:
+    # For development, using H2 in-memory database
+    url: jdbc:h2:mem:auth_db
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
   jpa:
     hibernate:
       ddl-auto: create-drop
@@ -18,7 +23,7 @@ spring:
       hibernate:
         show_sql: true
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.H2Dialect
 
 eureka:
   client:
@@ -35,11 +40,20 @@ jwt:
   expiration: 3600 # in seconds
 
 # OpenTelemetry configuration
-opentelemetry:
-  jaeger:
-    endpoint: http://localhost:14250
-
 management:
+  tracing:
+    sampling:
+      probability: 1.0
+  otel:
+    config:
+      trace:
+        sampler: always_on
+    traces:
+      exporter: otlp
+    metrics:
+      exporter: prometheus
+    logs:
+      exporter: none
   endpoints:
     web:
       exposure:
